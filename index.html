@@ -564,19 +564,27 @@ hr.sep{border:none; border-top:1px solid var(--card-border); margin:18px 0;}
    ================================================================ */
 const DEFAULT_DATA = {
   entreprise: {
-    nom: "Xeler Robotique",
-    adresse: "Bâtiment Copenhague, 100 rue Louis Blanc, 60160 Montataire",
-    tel: "03 44 32 11 73",
-    email: "regis.burgat@xeler.com",
-    zone: "Hauts-de-France et Île-de-France",
-    mentions: "Devis valable 30 jours. Prix nets, hors installation sauf mention contraire. TVA 20%."
+        nom: "Xeler Robotique",
+        adresse: "Bâtiment Copenhague, 100 rue Louis Blanc, 60160 Montataire",
+        tel: "03 44 32 11 73",
+        email: "regis.burgat@xeler.com",
+        zone: "Hauts-de-France et Île-de-France",
+        mentions: "Devis valable 30 jours. Prix nets, hors installation sauf mention contraire. TVA 20%.",
+        conditionsPaiement: "Acompte de 50% à la commande, solde de 50% à la livraison, après installation et mise en configuration.",
+        rib: {
+                titulaire: "XELER ARTOIS LYS",
+                adresseTitulaire: "100 rue Louis Blanc, 60160 Montataire",
+                iban: "FR76 3002 7172 6300 0211 7370 118",
+                bic: "CMCIFRPP",
+                banque: "CIC Creil Centre"
+        }
   },
-  mail: {
-    adresse: "",
-    objet: "Votre devis Xeler Robotique — {NUM_DEVIS}",
-    message: "Bonjour {CLIENT},\n\nVeuillez trouver ci-joint votre devis {NUM_DEVIS} pour la solution robotique présentée.\nN'hésitez pas à me contacter pour toute question.\n\nCordialement,\nXeler Robotique",
-    ar: false
-  },
+    mail: {
+          adresse: "",
+          objet: "Votre devis Xeler Robotique — {NUM_DEVIS}",
+          message: "Bonjour {CLIENT},\n\nSuite à notre échange, vous trouverez ci-joint votre devis {NUM_DEVIS} pour la solution robotique présentée, ainsi que la fiche technique du ou des équipements concernés.\n\nPour rappel, la commande est validée par le retour signé du devis accompagné d'un acompte de 50% ; le solde est réglé à la livraison, une fois le matériel installé et configuré.\n\nJe reste à votre disposition pour toute question.\n\nBien cordialement,\nRégis Burgat\nXeler Robotique — 03 44 32 11 73",
+          ar: false
+    },
   financement: {
     taux: 2.1,
     duree: 60,
@@ -772,6 +780,8 @@ function loadData(){
   if(!raw){ localStorage.setItem(LS_KEY, JSON.stringify(DEFAULT_DATA)); data = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
   else { try{ data = JSON.parse(raw); }catch(e){ data = JSON.parse(JSON.stringify(DEFAULT_DATA)); } }
   if(!data.financement) data.financement = JSON.parse(JSON.stringify(DEFAULT_DATA.financement));
+    if(data.entreprise && !data.entreprise.rib) data.entreprise.rib = JSON.parse(JSON.stringify(DEFAULT_DATA.entreprise.rib));
+    if(data.entreprise && data.entreprise.conditionsPaiement===undefined) data.entreprise.conditionsPaiement = DEFAULT_DATA.entreprise.conditionsPaiement;
   (data.robots||[]).forEach(r=>{ if(r.prixLocation!==undefined) delete r.prixLocation; });
   return data;
 }
@@ -1121,20 +1131,22 @@ function renderDocument(){
 /* ================================================================
    EXPORT PDF
    ================================================================ */
-const PDF_COLORS = {
-    accent: [255,86,55],
-    accentDark: [214,67,31],
-    dark: [12,18,32],
-    textSoft: [90,95,105],
-    textFaint: [140,145,155],
-    border: [225,227,232],
-    panelBg: [246,247,249]
-};
+const XELER_LOGO_DATAURL = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBAUEBAYFBQUGBgYHCQ4JCQgICRINDQoOFRIWFhUSFBQXGiEcFxgfGRQUHScdHyIjJSUlFhwpLCgkKyEkJST/2wBDAQYGBgkICREJCREkGBQYJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCT/wAARCABqAWgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//9k="
+  
+  const PDF_COLORS = {
+      accent: [255,86,55],
+      accentDark: [214,67,31],
+      dark: [12,18,32],
+      textSoft: [90,95,105],
+      textFaint: [140,145,155],
+      border: [225,227,232],
+      panelBg: [246,247,249]
+  };
   
   function loadImageAsDataUrl(url){
       return new Promise((resolve)=>{
             const img = new Image();
-            img.crossOrigin = "anonymous";
+      img.crossOrigin = "anonymous";
             img.onload = ()=>{
                     try{
                               const canvas = document.createElement("canvas");
@@ -1157,7 +1169,8 @@ const PDF_COLORS = {
       let y = 16;
     
       function ensureSpace(h){
-            if(y + h > PH - 18){ doc.addPage(); y = 16; }
+            if(y + h > PH - 20){ doc.addPage(); y = 16; return true; }
+            return false;
       }
       function setColor(c){ doc.setTextColor(c[0],c[1],c[2]); }
       function setFill(c){ doc.setFillColor(c[0],c[1],c[2]); }
@@ -1166,28 +1179,37 @@ const PDF_COLORS = {
       const t = computeTotals();
       const ent = DATA.entreprise;
       const fin = DATA.financement;
+      const rib = ent.rib || {};
       const dateStr = new Date().toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'});
     
-      // ---- Header ----
-      doc.setFont("helvetica","bold"); doc.setFontSize(16);
-      setColor(PDF_COLORS.dark);
-      doc.text("XELER", MX, y+5);
-      const xelerW = doc.getTextWidth("XELER ");
-      setColor(PDF_COLORS.accent);
-      doc.text("ROBOTIQUE", MX + xelerW, y+5);
+      function drawHeader(){
+            if(XELER_LOGO_DATAURL){
+                    const logoH = 9, logoW = logoH * (360/106);
+                    try{ doc.addImage(XELER_LOGO_DATAURL, "JPEG", MX, y-2, logoW, logoH, undefined, "FAST"); }catch(e){}
+            } else {
+                    doc.setFont("helvetica","bold"); doc.setFontSize(16);
+                    setColor(PDF_COLORS.dark);
+                    doc.text("XELER", MX, y+5);
+                    const xelerW = doc.getTextWidth("XELER ");
+                    setColor(PDF_COLORS.accent);
+                    doc.text("ROBOTIQUE", MX + xelerW, y+5);
+            }
+        
+            doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
+            setColor(PDF_COLORS.textSoft);
+            doc.text(ent.adresse||"", PW-MX, y+1, {align:"right"});
+            doc.text(`${ent.tel||""} — ${ent.email||""}`, PW-MX, y+5, {align:"right"});
+        
+            y += 9;
+            setDraw(PDF_COLORS.accent); doc.setLineWidth(0.8);
+            doc.line(MX, y, PW-MX, y);
+            y += 8;
+      }
     
-      doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
-      setColor(PDF_COLORS.textSoft);
-      doc.text(ent.adresse||"", PW-MX, y+1, {align:"right"});
-      doc.text(`${ent.tel||""} — ${ent.email||""}`, PW-MX, y+5, {align:"right"});
-    
-      y += 9;
-      setDraw(PDF_COLORS.accent); doc.setLineWidth(0.8);
-      doc.line(MX, y, PW-MX, y);
-      y += 8;
+      drawHeader();
     
       doc.setFont("helvetica","bold"); doc.setFontSize(15);
-    setColor(PDF_COLORS.dark);
+      setColor(PDF_COLORS.dark);
       doc.text(`Devis ${currentDevisNum}`, MX, y);
       y += 6;
       doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
@@ -1200,147 +1222,164 @@ const PDF_COLORS = {
       const clientLine2 = `${devis.client.email||''}${devis.client.tel? '  —  '+devis.client.tel : ''}`;
       setFill(PDF_COLORS.panelBg);
       doc.roundedRect(MX, y, usableW, 14, 2, 2, "F");
-          doc.setFont("helvetica","bold"); doc.setFontSize(9.5);
+      doc.setFont("helvetica","bold"); doc.setFontSize(9.5);
       setColor(PDF_COLORS.dark);
       doc.text("Client : " + clientLine1, MX+4, y+6);
       doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
       setColor(PDF_COLORS.textSoft);
       if(clientLine2.trim()) doc.text(clientLine2, MX+4, y+11);
-                                                                        y += 20;
+      y += 20;
     
-      // ---- Robot cards ----
-    for(const [id, sel] of Object.entries(devis.robots)){
-          const r = DATA.robots.find(x=>x.id===id); if(!r) continue;
-          let unit = r.prixAchat||0;
-          let optNames = [];
-          sel.options.forEach(optId=>{
-                  const o = (r.options||[]).find(x=>x.id===optId);
-                  if(o){ unit += o.prix; optNames.push(o.nom); }
-          });
-          const lineTotal = unit*sel.qty;
-      
-          const descLines = doc.splitTextToSize(r.description||"", usableW - 42);
-          const encarts = (r.encarts||[]).slice(0,4);
-          const cardH = 8 + descLines.length*4 + (encarts.length?7:0) + (optNames.length?5:0) + 8 + 4;
-          ensureSpace(cardH);
-      
-          const cardTop = y;
-          setDraw(PDF_COLORS.border); doc.setLineWidth(0.3);
-          setFill([255,255,255]);
-          doc.roundedRect(MX, y, usableW, cardH, 2, 2, "S");
-      
-          // image
-          const imgBoxSize = 30;
-          if(r.image){
-                  const dataUrl = await loadImageAsDataUrl(r.image);
-                  if(dataUrl){
-                            try{ doc.addImage(dataUrl, "JPEG", MX+3, y+3, imgBoxSize, imgBoxSize, undefined, "FAST"); }catch(e){}
-                  }
-          }
-          const textX = MX + imgBoxSize + 8;
-          const textW = usableW - imgBoxSize - 12;
-          let ty = y + 6;
-          doc.setFont("helvetica","bold"); doc.setFontSize(6.8);
-          setColor(PDF_COLORS.accent);
-          doc.text((r.categorie||"").toUpperCase(), textX, ty);
-          ty += 4.5;
-          doc.setFont("helvetica","bold"); doc.setFontSize(11);
-          setColor(PDF_COLORS.dark);
-          doc.text(r.nom, textX, ty);
-          ty += 5;
-          doc.setFont("helvetica","normal"); doc.setFontSize(7.8);
-          setColor(PDF_COLORS.textSoft);
-          doc.text(descLines, textX, ty);
-          ty += descLines.length*3.6 + 1;
-      
-          if(encarts.length){
-                  const colW = textW/4;
-                  encarts.forEach((e,i)=>{
-                            const ex = textX + i*colW;
-                            doc.setFont("helvetica","bold"); doc.setFontSize(6);
-                            setColor(PDF_COLORS.accentDark);
-                            doc.text((e.titre||"").toUpperCase(), ex, ty, {maxWidth: colW-2});
-                            doc.setFont("helvetica","normal"); doc.setFontSize(7);
-                            setColor(PDF_COLORS.dark);
-                            doc.text(e.texte||"", ex, ty+3.2, {maxWidth: colW-2});
-                  });
-                  ty += 7;
+      // ---- Robot cards (contenu dessiné d'abord, bordure dessinée APRÈS sur la hauteur réelle) ----
+      for(const [id, sel] of Object.entries(devis.robots)){
+            const r = DATA.robots.find(x=>x.id===id); if(!r) continue;
+            let unit = r.prixAchat||0;
+            let optNames = [];
+            sel.options.forEach(optId=>{
+                    const o = (r.options||[]).find(x=>x.id===optId);
+                    if(o){ unit += o.prix; optNames.push(o.nom); }
+            });
+            const lineTotal = unit*sel.qty;
+        
+            const imgBoxSize = 30;
+            const textX0 = MX + imgBoxSize + 8;
+            const textW = usableW - imgBoxSize - 12;
+            const descLines = doc.splitTextToSize(r.description||"", textW);
+            const encarts = (r.encarts||[]).slice(0,4);
+        
+            // Hauteur réelle estimée AVANT dessin (mêmes increments que le rendu ci-dessous)
+            let estH = 6 + 4.5 + 5 + (descLines.length*3.6 + 1);
+            if(encarts.length) estH += 7;
+            if(optNames.length) estH += 4.5;
+            estH += 9; // marge + séparateur + ligne de prix
+            if(estH < imgBoxSize + 6) estH = imgBoxSize + 6;
+        
+            // Si la carte ne tient pas sur la page, on saute une page AVANT de commencer à dessiner
+            if(y + estH > PH - 20){ doc.addPage(); y = 16; }
+        
+            const cardTop = y;
+            const textX = textX0;
+        
+            // image
+            if(r.image){
+                    const dataUrl = await loadImageAsDataUrl(r.image);
+                    if(dataUrl){
+                              try{ doc.addImage(dataUrl, "JPEG", MX+3, cardTop+3, imgBoxSize, imgBoxSize, undefined, "FAST"); }catch(e){}
+                    }
+            }
+        
+            let ty = cardTop + 6;
+            doc.setFont("helvetica","bold"); doc.setFontSize(6.8);
+            setColor(PDF_COLORS.accent);
+            doc.text((r.categorie||"").toUpperCase(), textX, ty);
+            ty += 4.5;
+            doc.setFont("helvetica","bold"); doc.setFontSize(11);
+            setColor(PDF_COLORS.dark);
+            doc.text(r.nom, textX, ty);
+            ty += 5;
+            doc.setFont("helvetica","normal"); doc.setFontSize(7.8);
+            setColor(PDF_COLORS.textSoft);
+            doc.text(descLines, textX, ty);
+            ty += descLines.length*3.6 + 1;
+        
+            if(encarts.length){
+                    const colW = textW/4;
+                    encarts.forEach((e,i)=>{
+                              const ex = textX + i*colW;
+                              doc.setFont("helvetica","bold"); doc.setFontSize(6);
+                              setColor(PDF_COLORS.accentDark);
+                              doc.text((e.titre||"").toUpperCase(), ex, ty, {maxWidth: colW-2});
+                              doc.setFont("helvetica","normal"); doc.setFontSize(7);
+                              setColor(PDF_COLORS.dark);
+                              doc.text(e.texte||"", ex, ty+3.2, {maxWidth: colW-2});
+                    });
+                    ty += 7;
+            }
+            if(optNames.length){
+                    doc.setFont("helvetica","italic"); doc.setFontSize(7);
+                    setColor(PDF_COLORS.textFaint);
+                    doc.text("+ "+optNames.join(", "), textX, ty, {maxWidth: textW});
+                    ty += 4.5;
+            }
+        
+            // ligne de prix — positionnée juste après le contenu réel (jamais de chevauchement)
+            const minBottomForImage = cardTop + imgBoxSize + 6;
+            let priceY = Math.max(ty + 5, minBottomForImage);
+            setDraw(PDF_COLORS.border); doc.setLineWidth(0.2);
+            doc.line(textX, priceY-4, MX+usableW-3, priceY-4);
+            doc.setFont("helvetica","normal"); doc.setFontSize(8);
+            setColor(PDF_COLORS.textSoft);
+            doc.text(`Qté ${sel.qty} × ${unit?fmt(unit):'—'}`, textX, priceY);
+            doc.setFont("helvetica","bold"); doc.setFontSize(9.5);
+            setColor(PDF_COLORS.accent);
+            doc.text(unit?fmt(lineTotal):'Prix à confirmer', MX+usableW-3, priceY, {align:"right"});
+        
+            const cardBottom = priceY + 3;
+            const cardH = cardBottom - cardTop;
+        
+            // bordure dessinée en dernier (trait seul, ne recouvre pas le texte déjà tracé)
+            setDraw(PDF_COLORS.border); doc.setLineWidth(0.3);
+            doc.roundedRect(MX, cardTop, usableW, cardH, 2, 2, "S");
+        
+            y = cardBottom + 4;
       }
-      if(optNames.length){
-              doc.setFont("helvetica","italic"); doc.setFontSize(7);
-              setColor(PDF_COLORS.textFaint);
-              doc.text("+ "+optNames.join(", "), textX, ty, {maxWidth: textW});
-              ty += 4.5;
-      }
-      
-          // price line
-          const priceY = cardTop + cardH - 4;
-          setDraw(PDF_COLORS.border); doc.setLineWidth(0.2);
-          doc.line(textX, priceY-3, MX+usableW-3, priceY-3);
-          doc.setFont("helvetica","normal"); doc.setFontSize(8);
-          setColor(PDF_COLORS.textSoft);
-          doc.text(`Qté ${sel.qty} × ${unit?fmt(unit):'—'}`, textX, priceY);
-          doc.setFont("helvetica","bold"); doc.setFontSize(9.5);
-          setColor(PDF_COLORS.accent);
-          doc.text(unit?fmt(lineTotal):'Prix à confirmer', MX+usableW-3, priceY, {align:"right"});
-      
-          y = cardTop + cardH + 4;
-    }
     
       // ---- Consommables ----
       const consomEntries = Object.entries(devis.consommables).filter(([id])=>DATA.consommables.find(c=>c.id===id));
       if(consomEntries.length){
-            ensureSpace(8 + consomEntries.length*6 + 4);
+            if(ensureSpace(8 + consomEntries.length*6 + 4)) drawHeader();
             doc.setFont("helvetica","bold"); doc.setFontSize(9);
             setColor(PDF_COLORS.dark);
             doc.text("Consommables", MX, y); y += 5;
             setFill(PDF_COLORS.dark);
-                doc.rect(MX, y, usableW, 6, "F");
+            doc.rect(MX, y, usableW, 6, "F");
             doc.setFont("helvetica","bold"); doc.setFontSize(7);
             setColor([255,255,255]);
             doc.text("DÉSIGNATION", MX+3, y+4);
-      doc.text("QTÉ", MX+usableW-55, y+4);
-      doc.text("PRIX UNITAIRE", MX+usableW-38, y+4);
+            doc.text("QTÉ", MX+usableW-55, y+4);
+            doc.text("PRIX UNITAIRE", MX+usableW-38, y+4);
             doc.text("TOTAL", MX+usableW-3, y+4, {align:"right"});
             y += 6;
             consomEntries.forEach(([id,qty],i)=>{
                     const c = DATA.consommables.find(x=>x.id===id);
                     if(i%2===1){ setFill(PDF_COLORS.panelBg); doc.rect(MX, y, usableW, 6, "F"); }
-        doc.setFont("helvetica","normal"); doc.setFontSize(8);
+                    doc.setFont("helvetica","normal"); doc.setFontSize(8);
                     setColor(PDF_COLORS.dark);
                     doc.text(c.nom, MX+3, y+4);
-        doc.text(String(qty), MX+usableW-55, y+4);
+                    doc.text(String(qty), MX+usableW-55, y+4);
                     doc.text(fmt(c.prix), MX+usableW-38, y+4);
                     doc.text(fmt(c.prix*qty), MX+usableW-3, y+4, {align:"right"});
-                                                                    y += 6;
+                    y += 6;
             });
-          y += 4;
+            y += 4;
       }
     
-      // ---- Totals ----
+      // ---- Totals (lignes réparties de façon égale : les deux blocs restent alignés quel que soit le nombre de lignes) ----
       const hasMensualite = t.mensualiteTtc > 0;
       const boxW = hasMensualite ? (usableW-6)/2 : usableW;
-      ensureSpace(38);
-      const boxTop = y;
       const boxH = 34;
+      if(ensureSpace(boxH)) drawHeader();
+      const boxTop = y;
     
       function totalsBox(x, w, title, rows, highlight){
             setDraw(PDF_COLORS.border); doc.setLineWidth(0.3);
             setFill(highlight ? [255,243,240] : PDF_COLORS.panelBg);
             doc.roundedRect(x, boxTop, w, boxH, 2, 2, "F");
-            let by = boxTop + 6;
+            const titleY = boxTop + 6;
             doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
             setColor(PDF_COLORS.dark);
-            doc.text(title, x+4, by);
-            by += 5.5;
+            doc.text(title, x+4, titleY, {maxWidth: w-8});
+            const rowsTop = titleY + 4;
+            const rowsAvailH = (boxTop + boxH - 4) - rowsTop;
+            const rowH = rowsAvailH / rows.length;
             rows.forEach((row,i)=>{
                     const isLast = i===rows.length-1;
+                    const ry = rowsTop + rowH*i + rowH*0.72;
                     doc.setFont("helvetica", isLast?"bold":"normal");
                     doc.setFontSize(isLast?9.5:8);
                     setColor(isLast? PDF_COLORS.accent : PDF_COLORS.textSoft);
-                    doc.text(row[0], x+4, by);
-                    doc.text(row[1], x+w-4, by, {align:"right"});
-                    by += isLast?5.5:4.5;
+                    doc.text(row[0], x+4, ry);
+                    doc.text(row[1], x+w-4, ry, {align:"right"});
             });
       }
     
@@ -1348,7 +1387,7 @@ const PDF_COLORS = {
             ["Total HT", fmt(t.ht)],
             ["Remise", "− "+fmt(t.remiseAmount)],
             ["TVA (20%)", fmt(t.tva)],
-      ["Total TTC", fmt(t.ttc)]
+            ["Total TTC", fmt(t.ttc)]
           ], false);
     
       if(hasMensualite){
@@ -1368,8 +1407,60 @@ const PDF_COLORS = {
             y += mentionLines.length*3 + 3;
       }
     
+      // ---- Modalités de paiement + RIB ----
+      const payBoxH = 26;
+      if(ensureSpace(payBoxH)) drawHeader();
+      const payTop = y;
+      const payBoxW = (usableW-6)/2;
+    
+      setDraw(PDF_COLORS.border); doc.setLineWidth(0.3);
+      setFill(PDF_COLORS.panelBg);
+      doc.roundedRect(MX, payTop, payBoxW, payBoxH, 2, 2, "F");
+      doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
+      setColor(PDF_COLORS.dark);
+      doc.text("Modalités de paiement", MX+4, payTop+6);
+      doc.setFont("helvetica","normal"); doc.setFontSize(7.5);
+      setColor(PDF_COLORS.textSoft);
+      const condLines = doc.splitTextToSize(ent.conditionsPaiement || "Acompte de 50% à la commande, solde à la livraison.", payBoxW-8);
+      doc.text(condLines, MX+4, payTop+11);
+    
+      const ribX = MX+payBoxW+6;
+      setFill(PDF_COLORS.panelBg);
+      doc.roundedRect(ribX, payTop, payBoxW, payBoxH, 2, 2, "F");
+      doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
+      setColor(PDF_COLORS.dark);
+      doc.text("Coordonnées bancaires", ribX+4, payTop+6);
+      doc.setFont("helvetica","normal"); doc.setFontSize(7.3);
+      setColor(PDF_COLORS.textSoft);
+      doc.text(`Titulaire : ${rib.titulaire||""}`, ribX+4, payTop+10.5);
+      doc.text(`IBAN : ${rib.iban||""}`, ribX+4, payTop+14.5);
+      doc.text(`BIC : ${rib.bic||""}   —   ${rib.banque||""}`, ribX+4, payTop+18.5);
+    
+      y = payTop + payBoxH + 6;
+    
+      // ---- Bloc signature ----
+      const sigBoxH = 30;
+      if(ensureSpace(sigBoxH)) drawHeader();
+      const sigTop = y;
+      const sigBoxW = (usableW-6)/2;
+    
+      function signatureBox(x, label){
+            setDraw(PDF_COLORS.border); doc.setLineWidth(0.3);
+            doc.roundedRect(x, sigTop, sigBoxW, sigBoxH, 2, 2, "S");
+            doc.setFont("helvetica","bold"); doc.setFontSize(8);
+            setColor(PDF_COLORS.dark);
+            doc.text(label, x+4, sigTop+6);
+            doc.setFont("helvetica","normal"); doc.setFontSize(7.3);
+            setColor(PDF_COLORS.textFaint);
+            doc.text("Date :", x+4, sigTop+13);
+            doc.text("Signature et cachet :", x+4, sigTop+19);
+      }
+      signatureBox(MX, "Bon pour accord — Xeler Robotique");
+      signatureBox(MX+sigBoxW+6, "Bon pour accord — Client");
+      y = sigTop + sigBoxH + 5;
+    
       // ---- Footer ----
-      ensureSpace(10);
+      if(ensureSpace(10)) drawHeader();
       setDraw(PDF_COLORS.border); doc.setLineWidth(0.2);
       doc.line(MX, y, PW-MX, y); y += 4;
       doc.setFont("helvetica","normal"); doc.setFontSize(7);
@@ -1424,20 +1515,60 @@ const PDF_COLORS = {
             if(attachedCount>0) toast(`PDF téléchargé avec ${attachedCount} fiche(s) technique(s) jointe(s).`);
             else if(failedCount>0) toast("PDF téléchargé — certaines fiches n'ont pas pu être jointes (app non hébergée en ligne ?).");
             else toast("PDF téléchargé.");
+            return blob;
       }catch(e){
             console.error(e);
             toast("Erreur lors de la génération du PDF : " + (e && e.message ? e.message : e));
+            return null;
       }
   }
   
-  function openSendModal(){
-    const ent = DATA.entreprise, mail = DATA.mail;
+  // Envoi : sur mobile (et certains navigateurs desktop compatibles), utilise le partage natif
+  // pour joindre directement le PDF dans Outlook/Mail — pas de manipulation de fichier requise.
+  // Sinon, repli sur le téléchargement + ouverture d'un brouillon mailto.
+  async function openSendModal(){
+      const ent = DATA.entreprise, mail = DATA.mail;
       if(!devis.client.email){ toast("Renseignez l'email du client avant l'envoi."); return; }
-      downloadPdf();
+    
+      toast("Génération du PDF...");
+      let finalBytes, attachedCount = 0;
+      try{
+            const result = await buildMergedPdf();
+            finalBytes = result.finalBytes;
+            attachedCount = result.attachedCount;
+      }catch(e){
+            console.error(e);
+            toast("Erreur lors de la génération du PDF : " + (e && e.message ? e.message : e));
+            return;
+      }
+    
       const subject = (mail.objet||"Votre devis Xeler Robotique — {NUM_DEVIS}").replace("{NUM_DEVIS}", currentDevisNum);
       const body = (mail.message||"").replace("{CLIENT}", devis.client.nom||"").replace("{NUM_DEVIS}", currentDevisNum);
-      const mailto = `mailto:${devis.client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\n(Pensez à joindre le PDF téléchargé : Devis_"+currentDevisNum+".pdf)")}`;
-      setTimeout(()=>{ window.location.href = mailto; }, 800);
+      const fileName = `Devis_${currentDevisNum}.pdf`;
+      const file = new File([finalBytes], fileName, {type:"application/pdf"});
+    
+      if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+            try{
+                    await navigator.share({files:[file], title: subject, text: body});
+                    toast("Partage ouvert — choisissez Outlook ou Mail pour joindre le PDF automatiquement.");
+                    return;
+            }catch(e){
+                    // L'utilisateur a annulé le partage, ou l'API a échoué : on continue sur le repli ci-dessous
+                    if(e && e.name === "AbortError") return;
+            }
+      }
+    
+      // Repli desktop : téléchargement + brouillon mailto (pièce jointe à glisser manuellement)
+      const blob = new Blob([finalBytes], {type:"application/pdf"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+      if(attachedCount>0) toast(`PDF téléchargé avec ${attachedCount} fiche(s) jointe(s) — ouverture de votre messagerie...`);
+      else toast("PDF téléchargé — ouverture de votre messagerie...");
+      const mailto = `mailto:${devis.client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\n(Pensez à joindre le PDF téléchargé : "+fileName+")")}`;
+                            setTimeout(()=>{ window.location.href = mailto; }, 900);
   }
   function renderCatalogue(){
   const grid = document.getElementById("catalogue-grid");
