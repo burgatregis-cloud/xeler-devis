@@ -1,0 +1,1597 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e1a">
+<title>Xeler Devis — Chiffrage robots</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<style>
+:root{
+  --bg-deep:#080b14;
+  --bg-mid:#0c1220;
+  --bg-card:rgba(255,255,255,0.045);
+  --bg-card-hover:rgba(255,255,255,0.075);
+  --card-border:rgba(255,255,255,0.09);
+  --blue-glow:#1e3a6f;
+  --accent:#ff5637;
+  --accent-dark:#d6431f;
+  --accent-soft:rgba(255,86,55,0.14);
+  --white:#ffffff;
+  --text-soft:rgba(255,255,255,0.72);
+  --text-faint:rgba(255,255,255,0.42);
+  --ok:#3ddc84;
+  --radius:14px;
+  --radius-sm:9px;
+  --font-display:'Space Grotesk',sans-serif;
+  --font-body:'Inter',sans-serif;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%;}
+body{
+  font-family:var(--font-body);
+  background:
+    radial-gradient(circle at 15% -10%, var(--blue-glow) 0%, transparent 45%),
+    radial-gradient(circle at 100% 10%, rgba(255,86,55,0.10) 0%, transparent 40%),
+    linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-mid) 100%);
+  background-attachment:fixed;
+  color:var(--white);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--accent); color:#fff;}
+a{color:inherit;}
+button{font-family:inherit; cursor:pointer;}
+input,select,textarea{font-family:inherit;}
+
+/* ---------- Layout shell ---------- */
+#app{display:flex; min-height:100vh;}
+.sidebar{
+  width:220px; flex-shrink:0;
+  background:rgba(255,255,255,0.02);
+  border-right:1px solid var(--card-border);
+  padding:22px 14px;
+  display:flex; flex-direction:column; gap:4px;
+  position:sticky; top:0; height:100vh;
+}
+.brand{
+  font-family:var(--font-display); font-weight:700; font-size:1.05rem;
+  padding:6px 10px 22px 10px; letter-spacing:0.02em;
+}
+.brand span{color:var(--accent);}
+.nav-item{
+  display:flex; align-items:center; gap:10px;
+  padding:11px 12px; border-radius:var(--radius-sm);
+  color:var(--text-soft); font-size:0.92rem; font-weight:500;
+  background:none; border:none; text-align:left; width:100%;
+  transition:background .15s, color .15s;
+}
+.nav-item .ic{width:18px; text-align:center; font-size:1rem;}
+.nav-item:hover{background:rgba(255,255,255,0.05); color:#fff;}
+.nav-item.active{background:var(--accent-soft); color:#fff;}
+.nav-item.active .ic{color:var(--accent);}
+.sidebar-foot{margin-top:auto; padding:10px; font-size:0.72rem; color:var(--text-faint);}
+
+.main{flex:1; min-width:0; padding:28px 34px 90px 34px;}
+.view{display:none; animation:fadeIn .25s ease;}
+.view.active{display:block;}
+@keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+
+.page-head{display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin-bottom:22px; flex-wrap:wrap;}
+.page-title{font-family:var(--font-display); font-size:1.6rem; font-weight:700;}
+.page-sub{color:var(--text-faint); font-size:0.88rem; margin-top:4px;}
+
+/* ---------- Mobile bottom nav ---------- */
+.bottom-nav{display:none;}
+@media (max-width:880px){
+  .sidebar{display:none;}
+  .main{padding:18px 16px 96px 16px;}
+  .bottom-nav{
+    display:flex; position:fixed; bottom:0; left:0; right:0; z-index:50;
+    background:rgba(10,13,22,0.92); backdrop-filter:blur(14px);
+    border-top:1px solid var(--card-border);
+    padding:8px 4px calc(8px + env(safe-area-inset-bottom));
+    justify-content:space-around;
+  }
+  .bn-item{
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    background:none; border:none; color:var(--text-faint); font-size:0.62rem;
+    font-weight:600; padding:4px 8px; border-radius:10px; flex:1;
+  }
+  .bn-item .ic{font-size:1.15rem;}
+  .bn-item.active{color:var(--accent);}
+}
+
+/* ---------- Cards / generic ---------- */
+.card{
+  background:var(--bg-card); border:1px solid var(--card-border);
+  border-radius:var(--radius); padding:18px;
+}
+.grid{display:grid; gap:16px;}
+.grid-robots{grid-template-columns:repeat(auto-fill, minmax(190px,1fr));}
+@media (max-width:880px){.grid-robots{grid-template-columns:repeat(auto-fill, minmax(150px,1fr));}}
+
+.robot-card{
+  background:var(--bg-card); border:1px solid var(--card-border); border-radius:var(--radius);
+  overflow:hidden; cursor:pointer; transition:transform .15s, background .15s, border-color .15s;
+  display:flex; flex-direction:column;
+}
+.robot-card:hover{background:var(--bg-card-hover); transform:translateY(-2px); border-color:rgba(255,86,55,0.35);}
+.robot-card.selected{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent);}
+.robot-thumb{
+  width:100%; aspect-ratio:1/1; background:#0e1524 center/contain no-repeat;
+  display:flex; align-items:center; justify-content:center; position:relative;
+}
+.robot-thumb img{width:100%; height:100%; object-fit:contain;}
+.robot-brand-pill{
+  position:absolute; top:8px; left:8px; background:rgba(0,0,0,0.55);
+  border:1px solid rgba(255,255,255,0.15); color:var(--text-soft);
+  font-size:0.62rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em;
+  padding:3px 8px; border-radius:20px;
+}
+.robot-info{padding:12px 13px 14px 13px; display:flex; flex-direction:column; gap:3px; flex:1;}
+.robot-name{font-family:var(--font-display); font-weight:700; font-size:0.94rem; line-height:1.2;}
+.robot-cat{color:var(--text-faint); font-size:0.72rem;}
+.robot-price{color:var(--accent); font-weight:700; font-size:0.85rem; margin-top:6px;}
+.qty-badge{
+  position:absolute; top:8px; right:8px; background:var(--accent); color:#fff;
+  font-size:0.72rem; font-weight:700; width:22px; height:22px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+}
+
+.pill{
+  display:inline-flex; align-items:center; gap:5px; padding:4px 11px; border-radius:20px;
+  background:rgba(255,255,255,0.06); border:1px solid var(--card-border); font-size:0.72rem; color:var(--text-soft);
+}
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:7px;
+  padding:10px 18px; border-radius:10px; border:1px solid transparent;
+  font-weight:600; font-size:0.86rem; transition:filter .15s, background .15s, transform .1s;
+}
+.btn:active{transform:scale(0.98);}
+.btn-primary{background:linear-gradient(135deg, var(--accent), var(--accent-dark)); color:#fff;}
+.btn-primary:hover{filter:brightness(1.08);}
+.btn-ghost{background:rgba(255,255,255,0.05); color:#fff; border-color:var(--card-border);}
+.btn-ghost:hover{background:rgba(255,255,255,0.09);}
+.btn-outline{background:transparent; border-color:var(--accent); color:var(--accent);}
+.btn-sm{padding:6px 12px; font-size:0.76rem;}
+.btn-danger{background:rgba(255,70,70,0.12); color:#ff6b6b; border-color:rgba(255,70,70,0.3);}
+.btn:disabled{opacity:0.4; cursor:not-allowed;}
+
+input[type=text], input[type=number], input[type=email], input[type=password], input[type=url], select, textarea{
+  width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--card-border);
+  color:#fff; padding:9px 12px; border-radius:9px; font-size:0.86rem; outline:none;
+  transition:border-color .15s;
+}
+input:focus, select:focus, textarea:focus{border-color:var(--accent);}
+label{font-size:0.75rem; color:var(--text-faint); font-weight:600; display:block; margin-bottom:5px; text-transform:uppercase; letter-spacing:0.02em;}
+.field{margin-bottom:13px;}
+.field-row{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+@media (max-width:600px){.field-row{grid-template-columns:1fr;}}
+
+hr.sep{border:none; border-top:1px solid var(--card-border); margin:18px 0;}
+
+/* ---------- Configurator ---------- */
+.config-layout{display:grid; grid-template-columns:1fr 340px; gap:22px; align-items:start;}
+@media (max-width:1080px){.config-layout{grid-template-columns:1fr;}}
+
+.selection-row{
+  display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--card-border);
+}
+.selection-row:last-child{border-bottom:none;}
+.selection-thumb{width:48px; height:48px; border-radius:8px; background:#0e1524 center/contain no-repeat; flex-shrink:0;}
+.selection-thumb img{width:100%; height:100%; object-fit:contain;}
+.selection-name{font-weight:600; font-size:0.88rem;}
+.selection-meta{font-size:0.74rem; color:var(--text-faint);}
+.qty-ctrl{display:flex; align-items:center; gap:8px;}
+.qty-ctrl button{
+  width:26px; height:26px; border-radius:7px; background:rgba(255,255,255,0.07); border:1px solid var(--card-border); color:#fff; font-weight:700;
+}
+.qty-ctrl span{min-width:18px; text-align:center; font-weight:600; font-size:0.85rem;}
+
+.opt-row{display:flex; align-items:center; justify-content:space-between; padding:7px 0; font-size:0.83rem;}
+.opt-row label{display:flex; align-items:center; gap:8px; text-transform:none; font-size:0.83rem; color:#fff; font-weight:500;}
+.opt-price{color:var(--text-faint); font-size:0.78rem;}
+
+.summary-card{position:sticky; top:20px; background:linear-gradient(160deg, rgba(255,86,55,0.08), rgba(255,255,255,0.03)); border:1px solid var(--card-border); border-radius:var(--radius); padding:20px;}
+.sum-line{display:flex; justify-content:space-between; font-size:0.85rem; padding:6px 0; color:var(--text-soft);}
+.sum-line.total{font-size:1.2rem; font-weight:700; color:#fff; border-top:1px solid var(--card-border); margin-top:8px; padding-top:12px;}
+.sum-line.total .val{color:var(--accent);}
+
+.empty-state{
+  text-align:center; padding:50px 20px; color:var(--text-faint);
+}
+.empty-state .ic{font-size:2.2rem; margin-bottom:10px; opacity:0.5;}
+
+/* ---------- Devis preview / document ---------- */
+.doc-wrap{border-radius:10px; overflow:hidden; max-width:820px; margin:0 auto;}
+.doc-page{padding:38px 42px;}
+.doc-header{display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid var(--accent); padding-bottom:18px; margin-bottom:22px;}
+.doc-logo{font-family:var(--font-display); font-weight:700; font-size:1.3rem; color:#0c1220;}
+.doc-logo span{color:var(--accent);}
+.doc-meta{text-align:right; font-size:0.78rem; color:#555;}
+.doc-title{font-family:var(--font-display); font-size:1.6rem; font-weight:700; margin-bottom:2px;}
+.doc-client{background:#f5f6f9; border-radius:8px; padding:14px 16px; margin-bottom:22px; font-size:0.85rem;}
+.doc-table{width:100%; border-collapse:collapse; font-size:0.82rem; margin-bottom:6px;}
+.doc-table th{text-align:left; background:#0c1220; color:#fff; padding:9px 10px; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.03em;}
+.doc-table td{padding:9px 10px; border-bottom:1px solid #eee; vertical-align:top;}
+.doc-table tr:last-child td{border-bottom:none;}
+.doc-encarts{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:14px 0 6px 0;}
+.doc-encart{background:#f5f6f9; border-radius:7px; padding:9px 10px; font-size:0.72rem;}
+.doc-encart b{display:block; color:var(--accent-dark); font-size:0.68rem; text-transform:uppercase; margin-bottom:2px;}
+.doc-totals{margin-left:auto; width:260px; font-size:0.85rem; margin-top:14px;}
+.doc-totals .row{display:flex; justify-content:space-between; padding:5px 0;}
+.doc-totals .row.total{font-weight:700; font-size:1.05rem; border-top:2px solid #0c1220; margin-top:6px; padding-top:9px;}
+.doc-foot{margin-top:30px; padding-top:16px; border-top:1px solid #eee; font-size:0.72rem; color:#888; display:flex; justify-content:space-between;}
+
+/* ---------- Devis document — dark brand version ---------- */
+.doc-page-dark{
+  background:
+    radial-gradient(circle at 10% -10%, #1e3a6f 0%, transparent 45%),
+    radial-gradient(circle at 100% 5%, rgba(255,86,55,0.14) 0%, transparent 40%),
+    linear-gradient(180deg, #0b0f1a 0%, #0e1526 100%);
+  color:#fff; border-radius:10px; padding:34px 36px; max-width:820px; margin:0 auto;
+}
+.doc-header-dark{display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid var(--accent); padding-bottom:16px; margin-bottom:18px;}
+.doc-logo-dark{font-family:var(--font-display); font-weight:700; font-size:1.25rem;}
+.doc-logo-dark span{color:var(--accent);}
+.doc-meta-dark{text-align:right; font-size:0.76rem; color:var(--text-faint);}
+.doc-title-dark{font-family:var(--font-display); font-size:1.5rem; font-weight:700;}
+.doc-sub-dark{color:var(--text-faint); font-size:0.78rem; margin-bottom:16px;}
+.doc-client-dark{background:rgba(255,255,255,0.05); border:1px solid var(--card-border); border-radius:9px; padding:12px 15px; margin-bottom:18px; font-size:0.83rem;}
+
+.doc-robot-card{display:flex; gap:14px; background:rgba(255,255,255,0.04); border:1px solid var(--card-border); border-radius:12px; padding:14px; margin-bottom:12px;}
+.doc-robot-photo{width:110px; height:110px; flex-shrink:0; border-radius:9px; background:#0e1524 center/contain no-repeat; display:flex; align-items:center; justify-content:center; overflow:hidden;}
+.doc-robot-photo img{width:100%; height:100%; object-fit:contain;}
+.doc-robot-noimg{font-size:0.62rem; color:var(--text-faint); text-align:center; padding:6px;}
+.doc-robot-body{flex:1; min-width:0;}
+.doc-robot-eyebrow{font-size:0.66rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--accent); font-weight:700;}
+.doc-robot-name{font-family:var(--font-display); font-weight:700; font-size:1.05rem; margin:2px 0 4px 0;}
+.doc-robot-desc{font-size:0.76rem; color:var(--text-soft); margin-bottom:8px; line-height:1.4;}
+.doc-mini-specs{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:8px;}
+.doc-mini-spec{background:rgba(255,255,255,0.05); border-radius:6px; padding:5px 7px; font-size:0.63rem;}
+.doc-mini-spec b{display:block; color:var(--accent); font-size:0.6rem; text-transform:uppercase; margin-bottom:1px;}
+.doc-robot-opts{font-size:0.72rem; color:var(--text-faint); margin-bottom:6px;}
+.doc-robot-priceline{display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--card-border); padding-top:7px; margin-top:2px;}
+.doc-robot-qty{font-size:0.76rem; color:var(--text-soft);}
+.doc-robot-total{font-weight:700; color:var(--accent); font-size:0.95rem;}
+
+.doc-section-label{font-weight:700; font-size:0.85rem; margin:18px 0 8px 0;}
+.doc-table-dark{width:100%; border-collapse:collapse; font-size:0.8rem; margin-bottom:8px;}
+.doc-table-dark th{text-align:left; background:rgba(255,255,255,0.06); padding:8px 10px; font-size:0.66rem; text-transform:uppercase; letter-spacing:0.03em; color:var(--text-soft);}
+.doc-table-dark td{padding:8px 10px; border-bottom:1px solid var(--card-border);}
+
+.doc-totals-dark{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:20px;}
+@media (max-width:600px){.doc-totals-dark{grid-template-columns:1fr;}}
+.doc-totals-block{background:rgba(255,255,255,0.04); border:1px solid var(--card-border); border-radius:10px; padding:14px 16px;}
+.doc-totals-block.accent{background:var(--accent-soft); border-color:rgba(255,86,55,0.35);}
+.doc-totals-title{font-weight:700; font-size:0.8rem; margin-bottom:8px;}
+.doc-totals-block .row{display:flex; justify-content:space-between; font-size:0.82rem; padding:3px 0; color:var(--text-soft);}
+.doc-totals-block .row.total{font-weight:700; font-size:1rem; color:#fff; border-top:1px solid var(--card-border); margin-top:5px; padding-top:7px;}
+.doc-fin-mention{font-size:0.65rem; color:var(--text-faint); margin-top:10px; line-height:1.4;}
+.doc-foot-dark{margin-top:24px; padding-top:14px; border-top:1px solid var(--card-border); font-size:0.7rem; color:var(--text-faint); display:flex; justify-content:space-between;}
+
+/* ---------- Admin ---------- */
+.tabs{display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap;}
+.tab-btn{
+  padding:8px 15px; border-radius:9px; background:rgba(255,255,255,0.04); border:1px solid var(--card-border);
+  color:var(--text-soft); font-size:0.82rem; font-weight:600;
+}
+.tab-btn.active{background:var(--accent-soft); color:#fff; border-color:rgba(255,86,55,0.4);}
+.admin-list-item{display:flex; align-items:center; gap:12px; padding:12px; border:1px solid var(--card-border); border-radius:10px; margin-bottom:8px; background:rgba(255,255,255,0.02);}
+.admin-thumb{width:42px; height:42px; border-radius:8px; background:#0e1524 center/contain no-repeat; flex-shrink:0;}
+.admin-thumb img{width:100%; height:100%; object-fit:contain;}
+.admin-item-name{font-weight:600; font-size:0.87rem;}
+.admin-item-sub{font-size:0.74rem; color:var(--text-faint);}
+.admin-item-actions{margin-left:auto; display:flex; gap:6px;}
+
+.modal-overlay{
+  position:fixed; inset:0; background:rgba(4,6,12,0.7); backdrop-filter:blur(3px);
+  display:flex; align-items:flex-start; justify-content:center; z-index:100; padding:30px 16px; overflow-y:auto;
+}
+.modal{
+  background:var(--bg-mid); border:1px solid var(--card-border); border-radius:16px; padding:24px; width:100%; max-width:560px;
+}
+.modal-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;}
+.modal-head h3{font-family:var(--font-display); font-size:1.15rem;}
+.close-x{background:none; border:none; color:var(--text-faint); font-size:1.3rem;}
+.opt-edit-row{display:flex; gap:8px; margin-bottom:7px; align-items:center;}
+.opt-edit-row input{flex:1;}
+
+.toast{
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#151c2c; border:1px solid var(--card-border);
+  padding:11px 20px; border-radius:10px; font-size:0.85rem; z-index:200; box-shadow:0 8px 24px rgba(0,0,0,0.4);
+  display:flex; align-items:center; gap:8px;
+}
+.toast .ic{color:var(--ok);}
+
+.video-embed{aspect-ratio:16/9; width:100%; border-radius:10px; overflow:hidden; background:#000;}
+.video-embed iframe{width:100%; height:100%; border:none;}
+
+.fiche-pdf-frame{width:100%; height:80vh; min-height:500px; border:1px solid var(--card-border); border-radius:10px; background:#fff;}
+.fiche-fallback{background:var(--bg-card); border:1px solid var(--card-border); border-radius:var(--radius); padding:24px; max-width:640px;}
+@media (max-width:880px){.fiche-pdf-frame{height:70vh;}}
+
+.link-row{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+
+.banner-note{
+  background:rgba(255,86,55,0.08); border:1px solid rgba(255,86,55,0.25); border-radius:10px; padding:12px 14px;
+  font-size:0.8rem; color:var(--text-soft); margin-bottom:16px; line-height:1.5;
+}
+.banner-note b{color:#fff;}
+
+::-webkit-scrollbar{width:9px;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12); border-radius:10px;}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="sidebar">
+    <div class="brand">XELER <span>DEVIS</span></div>
+    <button class="nav-item active" data-view="devis"><span class="ic">⚡</span> Chiffrage rapide</button>
+    <button class="nav-item" data-view="catalogue"><span class="ic">▤</span> Catalogue</button>
+    <button class="nav-item" data-view="historique"><span class="ic">⟲</span> Historique</button>
+    <button class="nav-item" data-view="admin"><span class="ic">⚙</span> Administration</button>
+    <div class="sidebar-foot">Xeler Robotique<br>v1.0 — usage interne</div>
+  </div>
+
+  <div class="main">
+
+    <!-- ===================== VUE DEVIS RAPIDE ===================== -->
+    <div class="view active" id="view-devis">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Chiffrage rapide</div>
+          <div class="page-sub">Sélectionnez les robots, options et consommables pour générer un devis en direct.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="resetDevis()">↺ Nouveau devis</button>
+      </div>
+
+      <div class="config-layout">
+        <div>
+          <div class="card" style="margin-bottom:18px;">
+            <label>Client</label>
+            <div class="field-row">
+              <div class="field"><input type="text" id="cl-nom" placeholder="Nom du contact"></div>
+              <div class="field"><input type="text" id="cl-societe" placeholder="Société"></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><input type="email" id="cl-email" placeholder="Email"></div>
+              <div class="field"><input type="text" id="cl-tel" placeholder="Téléphone"></div>
+            </div>
+          </div>
+
+          <h3 style="font-family:var(--font-display); font-size:1.05rem; margin-bottom:12px;">Robots</h3>
+          <div class="grid grid-robots" id="robot-grid"></div>
+
+          <div id="selected-robots-panel" style="margin-top:22px;"></div>
+
+          <div style="margin-top:22px;">
+            <h3 style="font-family:var(--font-display); font-size:1.05rem; margin-bottom:12px;">Consommables</h3>
+            <div class="card">
+              <div class="field-row" style="align-items:end;">
+                <div class="field" style="margin-bottom:0;">
+                  <label>Ajouter un consommable</label>
+                  <select id="consum-select"></select>
+                </div>
+                <div class="field" style="margin-bottom:0;">
+                  <button class="btn btn-outline" style="width:100%;" onclick="addConsumable()">+ Ajouter</button>
+                </div>
+              </div>
+              <div id="consum-list" style="margin-top:10px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-card">
+          <div style="font-family:var(--font-display); font-weight:700; margin-bottom:10px;">Récapitulatif</div>
+          <div class="field" style="margin-top:14px;">
+            <label>Remise</label>
+            <div style="display:flex; gap:8px;">
+              <input type="number" id="remise-val" value="0" min="0" style="width:70%;">
+              <select id="remise-type" style="width:30%;">
+                <option value="pct">%</option>
+                <option value="eur">€</option>
+              </select>
+            </div>
+          </div>
+          <div id="summary-lines-dynamic"></div>
+          <button class="btn btn-primary" style="width:100%; margin-top:14px;" onclick="genererDevis()">Générer le devis →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== VUE APERCU DEVIS ===================== -->
+    <div class="view" id="view-preview">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Aperçu du devis</div>
+          <div class="page-sub" id="preview-sub"></div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-ghost" onclick="switchView('devis')">← Modifier</button>
+          <button class="btn btn-outline" onclick="downloadPdf()">⬇ Télécharger PDF</button>
+          <button class="btn btn-primary" onclick="openSendModal()">✉ Envoyer par email</button>
+        </div>
+      </div>
+      <div id="doc-container" class="doc-wrap"></div>
+    </div>
+
+    <!-- ===================== VUE CATALOGUE ===================== -->
+    <div class="view" id="view-catalogue">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Catalogue</div>
+          <div class="page-sub">Brochures, fiches techniques et vidéos constructeur — présentation client hors-ligne ou en ligne.</div>
+        </div>
+      </div>
+      <div class="grid grid-robots" id="catalogue-grid"></div>
+    </div>
+
+    <!-- ===================== VUE FICHE TECHNIQUE ===================== -->
+    <div class="view" id="view-fiche">
+      <div class="page-head">
+        <div>
+          <div class="page-title" id="fiche-title">Fiche technique</div>
+          <div class="page-sub" id="fiche-sub"></div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-ghost" onclick="switchView('catalogue')">← Retour au catalogue</button>
+          <button class="btn btn-primary" id="fiche-chiffrer-btn">⚡ Chiffrer ce robot</button>
+        </div>
+      </div>
+      <div id="fiche-content"></div>
+    </div>
+
+    <!-- ===================== VUE HISTORIQUE ===================== -->
+    <div class="view" id="view-historique">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Historique des devis</div>
+          <div class="page-sub">Devis enregistrés localement sur cet appareil.</div>
+        </div>
+      </div>
+      <div id="historique-list"></div>
+    </div>
+
+    <!-- ===================== VUE ADMIN ===================== -->
+    <div class="view" id="view-admin">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Administration</div>
+          <div class="page-sub">Mise à jour des prix, robots, options et paramètres.</div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="robots" onclick="switchAdminTab('robots')">Robots</button>
+        <button class="tab-btn" data-tab="consommables" onclick="switchAdminTab('consommables')">Consommables</button>
+        <button class="tab-btn" data-tab="financement" onclick="switchAdminTab('financement')">Financement</button>
+        <button class="tab-btn" data-tab="entreprise" onclick="switchAdminTab('entreprise')">Entreprise</button>
+        <button class="tab-btn" data-tab="mail" onclick="switchAdminTab('mail')">Envoi email</button>
+        <button class="tab-btn" data-tab="donnees" onclick="switchAdminTab('donnees')">Sauvegarde</button>
+      </div>
+
+      <div class="admin-tab" id="admin-robots">
+        <button class="btn btn-primary btn-sm" style="margin-bottom:14px;" onclick="openRobotModal(null)">+ Nouveau robot</button>
+        <div id="admin-robot-list"></div>
+      </div>
+
+      <div class="admin-tab" id="admin-consommables" style="display:none;">
+        <button class="btn btn-primary btn-sm" style="margin-bottom:14px;" onclick="openConsumModal(null)">+ Nouveau consommable</button>
+        <div id="admin-consum-list"></div>
+      </div>
+
+      <div class="admin-tab" id="admin-financement" style="display:none;">
+        <div class="banner-note">
+          Chaque robot n'a qu'un seul prix de vente HT à renseigner. La mensualité de location financière est calculée automatiquement : <b>mensualité HT = prix HT × taux</b>, sur la durée indiquée, avec le financeur choisi. Elle apparaît partout dans l'application (fiches robot, configurateur, devis) sans ressaisie.
+        </div>
+        <div class="card" style="max-width:480px;">
+          <div class="field-row">
+            <div class="field"><label>Taux mensuel (%)</label><input type="number" step="0.01" id="fin-taux" value="2.1"></div>
+            <div class="field"><label>Durée (mois)</label><input type="number" id="fin-duree" value="60"></div>
+          </div>
+          <div class="field"><label>Financeur</label><input type="text" id="fin-financeur" value="Grenke"></div>
+          <div class="field"><label>Mention légale (affichée sur le devis)</label><textarea id="fin-mention" rows="3"></textarea></div>
+          <button class="btn btn-primary btn-sm" onclick="saveFinancement()">Enregistrer</button>
+        </div>
+      </div>
+
+      <div class="admin-tab" id="admin-entreprise" style="display:none;">
+        <div class="card" style="max-width:520px;">
+          <div class="field"><label>Nom de la société</label><input type="text" id="ent-nom"></div>
+          <div class="field"><label>Adresse</label><textarea id="ent-adresse" rows="2"></textarea></div>
+          <div class="field-row">
+            <div class="field"><label>Téléphone</label><input type="text" id="ent-tel"></div>
+            <div class="field"><label>Email</label><input type="text" id="ent-email"></div>
+          </div>
+          <div class="field"><label>Zone géographique</label><input type="text" id="ent-zone"></div>
+          <div class="field"><label>Mentions pied de devis (validité, conditions...)</label><textarea id="ent-mentions" rows="3"></textarea></div>
+          <button class="btn btn-primary btn-sm" onclick="saveEntreprise()">Enregistrer</button>
+        </div>
+      </div>
+
+      <div class="admin-tab" id="admin-mail" style="display:none;">
+        <div class="banner-note">
+          <b>Important :</b> pour des raisons de sécurité, un navigateur ne peut pas se connecter directement à un serveur Exchange pour envoyer un email avec pièce jointe automatiquement. Ces réglages préparent l'envoi : au clic sur « Envoyer par email », l'application ouvre un brouillon dans votre messagerie (Outlook / Exchange déjà configurée sur l'appareil) avec le destinataire, l'objet et le message pré-remplis. Le PDF est téléchargé juste avant — il ne reste qu'à le glisser en pièce jointe. Une intégration d'envoi 100% automatique avec accusé de réception nécessitera un petit serveur relais côté site web, prévu dans une prochaine étape.
+        </div>
+        <div class="card" style="max-width:520px;">
+          <div class="field"><label>Adresse Exchange / Outlook</label><input type="text" id="mail-adresse" placeholder="prenom.nom@xeler.com"></div>
+          <div class="field"><label>Objet type</label><input type="text" id="mail-objet" placeholder="Votre devis Xeler Robotique — {NUM_DEVIS}"></div>
+          <div class="field"><label>Message type</label><textarea id="mail-message" rows="6"></textarea></div>
+          <label style="display:flex; align-items:center; gap:8px; text-transform:none; font-size:0.85rem; margin-bottom:14px;">
+            <input type="checkbox" id="mail-ar" style="width:auto;"> Demander un accusé de réception (à activer manuellement dans Outlook au moment de l'envoi)
+          </label>
+          <button class="btn btn-primary btn-sm" onclick="saveMailSettings()">Enregistrer</button>
+        </div>
+      </div>
+
+      <div class="admin-tab" id="admin-donnees" style="display:none;">
+        <div class="banner-note">
+          Chaque appareil stocke ses données localement. Pour que vos collaborateurs aient le même catalogue et les mêmes prix, exportez un fichier après chaque mise à jour et partagez-le (email, clé USB, drive) — ils l'importent en un clic. Une synchronisation automatique en ligne pourra être ajoutée lors du passage au site web.
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-outline" onclick="exportData()">⬇ Exporter catalogue &amp; prix</button>
+          <label class="btn btn-ghost" style="position:relative; overflow:hidden;">
+            ⬆ Importer un fichier
+            <input type="file" id="import-file" accept=".json" style="position:absolute; inset:0; opacity:0; cursor:pointer;" onchange="importData(event)">
+          </label>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="bottom-nav">
+  <button class="bn-item active" data-view="devis"><span class="ic">⚡</span>Devis</button>
+  <button class="bn-item" data-view="catalogue"><span class="ic">▤</span>Catalogue</button>
+  <button class="bn-item" data-view="historique"><span class="ic">⟲</span>Historique</button>
+  <button class="bn-item" data-view="admin"><span class="ic">⚙</span>Admin</button>
+</div>
+
+<script>
+/* ================================================================
+   DONNEES PAR DEFAUT
+   ================================================================ */
+const DEFAULT_DATA = {
+  entreprise: {
+    nom: "Xeler Robotique",
+    adresse: "Bâtiment Copenhague, 100 rue Louis Blanc, 60160 Montataire",
+    tel: "03 44 32 11 73",
+    email: "regis.burgat@xeler.com",
+    zone: "Hauts-de-France et Île-de-France",
+    mentions: "Devis valable 30 jours. Prix nets, hors installation sauf mention contraire. TVA 20%."
+  },
+  mail: {
+    adresse: "",
+    objet: "Votre devis Xeler Robotique — {NUM_DEVIS}",
+    message: "Bonjour {CLIENT},\n\nVeuillez trouver ci-joint votre devis {NUM_DEVIS} pour la solution robotique présentée.\nN'hésitez pas à me contacter pour toute question.\n\nCordialement,\nXeler Robotique",
+    ar: false
+  },
+  financement: {
+    taux: 2.1,
+    duree: 60,
+    financeur: "Grenke",
+    mention: "Mensualité indicative en location financière sur 60 mois avec Grenke, sous réserve d'éligibilité et d'acceptation du dossier par le financeur. Cette simulation ne constitue pas une offre de financement."
+  },
+  robots: [
+    {
+      id: "keenon-t8", brand: "Keenon", nom: "Keenon T8", categorie: "Restauration & hôtellerie",
+      image: "assets/robots/keenon-t8.jpg", prixAchat: 19000,
+      description: "Avec un passage minimum de seulement 55 cm, le T8 se faufile là où les robots de service classiques bloquent : petits restaurants, bars, comptoirs et salles à la configuration serrée.",
+      encarts: [
+        {titre:"Passage mini.", texte:"55 cm"},
+        {titre:"Autonomie", texte:"15 h"},
+        {titre:"Charge utile", texte:"20 kg (3 plateaux)"},
+        {titre:"Réception", texte:"300° — tous angles"}
+      ],
+      options: [
+        {id:"t8-plateau", nom:"Plateau supplémentaire", prix:180},
+        {id:"t8-ecran", nom:"Écran publicitaire", prix:350}
+      ],
+      brochure: "", fiche: "", video: ""
+    },
+    {
+      id: "keenon-t9", brand: "Keenon", nom: "Keenon T9", categorie: "Restauration & hôtellerie",
+      image: "assets/robots/keenon-t9.jpg", prixAchat: 21857,
+      description: "4 plateaux réglables et 40 kg de charge totale : le T9 enchaîne les livraisons multi-tables sans repasser par la cuisine, même aux heures de rush.",
+      encarts: [
+        {titre:"Charge utile", texte:"40 kg (4 plateaux)"},
+        {titre:"Autonomie", texte:"18 h"},
+        {titre:"Passage mini.", texte:"70 cm"},
+        {titre:"Écran", texte:"11,6″ tactile HD"}
+      ],
+      options: [
+        {id:"t9-plateau", nom:"Plateau supplémentaire", prix:180}
+      ],
+      brochure: "", fiche: "", video: ""
+    },
+    {
+      id: "keenon-s100", brand: "Keenon", nom: "Keenon S100", categorie: "Industrie & logistique",
+      image: "assets/robots/keenon-s100.jpg", prixAchat: 18524,
+      description: "Prêt à l'emploi dès la mise en service (OS et applications préinstallés), le S100 automatise les navettes de matériel, bacs et cartons entre postes, stocks et zones d'expédition.",
+      encarts: [
+        {titre:"Charge utile", texte:"100 kg"},
+        {titre:"Autonomie", texte:"8 h"},
+        {titre:"Swap batterie", texte:"15 s"},
+        {titre:"Sécurité", texte:"Vision stéréo + LiDAR 360°"}
+      ],
+      options: [{id:"s100-remorque", nom:"Remorque additionnelle", prix:900}],
+      brochure: "", fiche: "", video: ""
+    },
+    {
+      id: "keenon-s300", brand: "Keenon", nom: "Keenon S300", categorie: "Industrie & logistique",
+      image: "assets/robots/keenon-s300.jpg", prixAchat: 21381,
+      description: "Même plateforme que le S100, capacité triplée : le S300 prend en charge les transports inter-lignes et le matériel volumineux, avec un passage libre de seulement 60 cm.",
+      encarts: [
+        {titre:"Charge utile", texte:"300 kg"},
+        {titre:"Autonomie", texte:"8 h"},
+        {titre:"Passage mini.", texte:"60 cm"},
+        {titre:"Certification", texte:"ISO 3691-4"}
+      ],
+      options: [{id:"s300-remorque", nom:"Remorque additionnelle", prix:1200}],
+      brochure: "", fiche: "", video: ""
+    },
+    {
+      id: "robotnik-rbwatcher", brand: "Robotnik", nom: "RBwatcher", categorie: "Surveillance",
+      image: "assets/robots/robotnik-rbwatcher.jpg", prixAchat: 32857,
+      description: "Basé sur la plateforme RB-SUMMIT de Robotnik, le RBwatcher patrouille en autonomie dans vos espaces intérieurs et extérieurs, là où les caméras fixes ont des angles morts et où l'humain ne peut pas toujours intervenir en sécurité.",
+      encarts: [
+        {titre:"Autonomie", texte:"5 h de patrouille"},
+        {titre:"Pente max.", texte:"35°"},
+        {titre:"Détection", texte:"Caméra bispectrale + IA"},
+        {titre:"Protection", texte:"IP54 — intérieur/extérieur"}
+      ],
+      options: [{id:"rbw-camera", nom:"Module capteurs additionnel", prix:1500}],
+      brochure: "", fiche: "", video: ""
+    },
+    {
+      id: "robotnik-rbsummit", brand: "Robotnik", nom: "RB-SUMMIT", categorie: "Surveillance",
+      image: "", prixAchat: null,
+      description: "Plateforme technique commune du RBwatcher — base robuste tout-terrain, IP54, jusqu'à 5h d'autonomie. Non commercialisée séparément dans le catalogue actuel.",
+      encarts: [
+        {titre:"Pente max.", texte:"35°"},
+        {titre:"Autonomie", texte:"~5 h"},
+        {titre:"Protection", texte:"IP54"},
+        {titre:"Usage", texte:"Base technique du RBwatcher"}
+      ],
+      options: [],
+      brochure: "", fiche: "", video: ""
+    },
+    {
+      id: "gausium-phantas", brand: "Gausium", nom: "PHANTAS", categorie: "Nettoyage — Gamme compacte",
+      image: "assets/robots/gausium-phantas.jpg", prixAchat: 19000,
+      description: "Aspiration, lavage, balayage et dépoussiérage : un seul robot agile pour l'entretien quotidien des bureaux, commerces et espaces d'accueil.",
+      encarts: [
+        {titre:"Efficacité pratique", texte:"350–700 m²/h"},
+        {titre:"Largeur aspir./lavage", texte:"410 mm / 330 mm"},
+        {titre:"Autonomie balayage/lavage", texte:"14 h / 4h30"},
+        {titre:"Passage mini.", texte:"600 mm"}
+      ],
+      options: [], brochure: "", fiche: "assets/fiches/gausium-phantas.pdf", video: ""
+    },
+    {
+      id: "gausium-mira", brand: "Gausium", nom: "MIRA", categorie: "Nettoyage — Gamme intermédiaire",
+      image: "assets/robots/gausium-mira.jpg", prixAchat: 19000,
+      description: "Conçue pour les surfaces moyennes (800 à 2 000 m²) : couloirs, galeries commerciales, ateliers — y compris les allées étroites.",
+      encarts: [
+        {titre:"Surface recommandée", texte:"800–2 000 m²"},
+        {titre:"Largeur lavage/balayage", texte:"400 mm / 750 mm"},
+        {titre:"Autonomie lavage/balayage", texte:"4 h / 8 h"},
+        {titre:"Passage mini.", texte:"660 mm"}
+      ],
+      options: [], brochure: "", fiche: "assets/fiches/gausium-mira.pdf", video: ""
+    },
+    {
+      id: "gausium-marvel", brand: "Gausium", nom: "MARVEL", categorie: "Nettoyage — Grandes surfaces",
+      image: "assets/robots/gausium-marvel.jpg", prixAchat: 19000,
+      description: "Plus de 3 000 m² à couvrir : retail, entrepôts, aéroports, hôpitaux — un seul robot polyvalent pour vos très grandes surfaces.",
+      encarts: [
+        {titre:"Surface recommandée", texte:"> 3 000 m²"},
+        {titre:"Largeur balayage/lavage", texte:"840 mm / 600 mm"},
+        {titre:"Autonomie lavage/balayage", texte:"5-7 h / ≥ 8 h"},
+        {titre:"Poids", texte:"220 kg"}
+      ],
+      options: [], brochure: "", fiche: "assets/fiches/gausium-marvel.pdf", video: ""
+    },
+    {
+      id: "gausium-omnie", brand: "Gausium", nom: "OMNIE", categorie: "Nettoyage — Très grandes surfaces",
+      image: "assets/robots/gausium-omnie.jpg", prixAchat: 19000,
+      description: "Conçue pour les aéroports, hypermarchés et centres commerciaux : détection à 360° et navigation fiable même en flux de circulation dense.",
+      encarts: [
+        {titre:"Largeur de nettoyage", texte:"780 mm"},
+        {titre:"Autonomie balayage/lavage", texte:"8 h / 3 h"},
+        {titre:"Vitesse max.", texte:"1,4 m/s"},
+        {titre:"Poids", texte:"148–157 kg"}
+      ],
+      options: [], brochure: "", fiche: "assets/fiches/gausium-omnie.pdf", video: ""
+    },
+    {
+      id: "gausium-beetle", brand: "Gausium", nom: "BEETLE", categorie: "Nettoyage — Extérieur & industrie",
+      image: "assets/robots/gausium-beetle.jpg", prixAchat: 19000,
+      description: "Jusqu'à 40 000 m² couverts en une nuit : conçu pour les sols industriels, parkings et zones extérieures les plus exigeants.",
+      encarts: [
+        {titre:"Efficacité max.", texte:"3 240 m²/h"},
+        {titre:"Largeur de nettoyage", texte:"750 mm"},
+        {titre:"Bac à déchets", texte:"45 L"},
+        {titre:"Poids", texte:"102–112 kg"}
+      ],
+      options: [], brochure: "", fiche: "assets/fiches/gausium-beetle.pdf", video: ""
+    },
+    {
+      id: "gausium-vacuum40", brand: "Gausium", nom: "VACUUM 40", categorie: "Nettoyage — Moquettes & hôtellerie",
+      image: "assets/robots/gausium-vacuum40.jpg", prixAchat: 19000,
+      description: "Hôtels, cinémas, bureaux : 3 modes de nettoyage de moquette et une filtration HEPA médicale pour un air plus sain.",
+      encarts: [
+        {titre:"Efficacité pratique", texte:"400–800 m²/h"},
+        {titre:"Largeur de nettoyage", texte:"720 mm"},
+        {titre:"Autonomie aspir./mopping", texte:"3 h / 18 h"},
+        {titre:"Poids", texte:"91 kg"}
+      ],
+      options: [], brochure: "", fiche: "assets/fiches/gausium-vacuum40.pdf", video: ""
+    },
+    {
+      id: "gausium-scrubber75", brand: "Gausium", nom: "SCRUBBER 75", categorie: "Nettoyage — Usage intensif",
+      image: "assets/robots/gausium-scrubber75.jpg", prixAchat: 19000,
+      description: "Halls immenses, parkings souterrains, sites industriels : la brosse 45 kg et le mode dégraissant viennent à bout des sols les plus difficiles.",
+      encarts: [
+        {titre:"Efficacité pratique", texte:"700–1 400 m²/h"},
+        {titre:"Pression de brossage", texte:"45 kg"},
+        {titre:"Réservoir eau propre/sale", texte:"75 L / 50 L"},
+        {titre:"Poids", texte:"400 kg"}
+      ],
+      options: [], brochure: "", fiche: "assets/fiches/gausium-scrubber75.pdf", video: ""
+    }
+  ],
+  consommables: [
+    {id:"c-brosse", nom:"Brosse de rechange", prix:65, unite:"unité"},
+    {id:"c-batterie", nom:"Batterie additionnelle", prix:420, unite:"unité"},
+    {id:"c-filtre", nom:"Filtre HEPA", prix:38, unite:"unité"},
+    {id:"c-plateau", nom:"Plateau de service", prix:55, unite:"unité"}
+  ]
+};
+
+/* ================================================================
+   ETAT / STOCKAGE
+   ================================================================ */
+const LS_KEY = "xeler_devis_data_v1";
+const LS_HISTORY = "xeler_devis_historique_v1";
+
+function loadData(){
+  const raw = localStorage.getItem(LS_KEY);
+  let data;
+  if(!raw){ localStorage.setItem(LS_KEY, JSON.stringify(DEFAULT_DATA)); data = JSON.parse(JSON.stringify(DEFAULT_DATA)); }
+  else { try{ data = JSON.parse(raw); }catch(e){ data = JSON.parse(JSON.stringify(DEFAULT_DATA)); } }
+  if(!data.financement) data.financement = JSON.parse(JSON.stringify(DEFAULT_DATA.financement));
+  (data.robots||[]).forEach(r=>{ if(r.prixLocation!==undefined) delete r.prixLocation; });
+  return data;
+}
+function saveData(){ localStorage.setItem(LS_KEY, JSON.stringify(DATA)); }
+function loadHistory(){ try{ return JSON.parse(localStorage.getItem(LS_HISTORY) || "[]"); }catch(e){ return []; } }
+function saveHistory(h){ localStorage.setItem(LS_HISTORY, JSON.stringify(h)); }
+
+let DATA = loadData();
+
+let devis = {
+  client: {nom:"", societe:"", email:"", tel:""},
+  robots: {}, // id -> {qty, options:[ids]}
+  consommables: {}, // id -> qty
+  remise: {val:0, type:"pct"}
+};
+
+/* ================================================================
+   NAVIGATION
+   ================================================================ */
+function switchView(name){
+  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+  document.getElementById("view-"+name).classList.add("active");
+  const navTarget = (name==="fiche") ? "catalogue" : name;
+  document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active", b.dataset.view===navTarget));
+  document.querySelectorAll(".bn-item").forEach(b=>b.classList.toggle("active", b.dataset.view===navTarget));
+  window.scrollTo(0,0);
+  if(name==="catalogue") renderCatalogue();
+  if(name==="historique") renderHistorique();
+  if(name==="admin") renderAdminAll();
+}
+document.querySelectorAll(".nav-item, .bn-item").forEach(b=>{
+  b.addEventListener("click", ()=>switchView(b.dataset.view));
+});
+
+function switchAdminTab(tab){
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active", b.dataset.tab===tab));
+  document.querySelectorAll(".admin-tab").forEach(t=>t.style.display="none");
+  document.getElementById("admin-"+tab).style.display="block";
+}
+
+function toast(msg){
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.innerHTML = `<span class="ic">✓</span> ${msg}`;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2600);
+}
+
+function fmt(n){
+  return (Math.round(n*100)/100).toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + " €";
+}
+
+/* ================================================================
+   VUE DEVIS — RENDU ROBOTS
+   ================================================================ */
+function priceLabel(r){
+  const hasA = r.prixAchat!=null && r.prixAchat>0;
+  if(!hasA) return "Prix à renseigner";
+  const mensu = r.prixAchat * (DATA.financement.taux/100);
+  return `${fmt(r.prixAchat)} <span style="color:var(--text-faint); font-weight:500;">— dès</span> ${fmt(mensu)}/mois`;
+}
+
+function renderRobotGrid(){
+  const grid = document.getElementById("robot-grid");
+  grid.innerHTML = DATA.robots.map(r=>{
+    const sel = devis.robots[r.id];
+    return `<div class="robot-card ${sel?'selected':''}" onclick="toggleRobot('${r.id}')">
+      <div class="robot-thumb">${r.image?`<img src="${r.image}">`:'🤖'}
+        ${sel?`<div class="qty-badge">${sel.qty}</div>`:''}
+        <div class="robot-brand-pill">${r.brand}</div>
+      </div>
+      <div class="robot-info">
+        <div class="robot-name">${r.nom}</div>
+        <div class="robot-cat">${r.categorie}</div>
+        <div class="robot-price">${priceLabel(r)}</div>
+      </div>
+    </div>`;
+  }).join("") || `<div class="empty-state"><div class="ic">🤖</div>Aucun robot dans le catalogue.<br>Ajoutez-en depuis Administration.</div>`;
+}
+
+function toggleRobot(id){
+  if(devis.robots[id]){ delete devis.robots[id]; }
+  else{ devis.robots[id] = {qty:1, options:[]}; }
+  renderAll();
+}
+
+function renderSelectedRobots(){
+  const panel = document.getElementById("selected-robots-panel");
+  const ids = Object.keys(devis.robots);
+  if(ids.length===0){ panel.innerHTML = ""; return; }
+  panel.innerHTML = `<h3 style="font-family:var(--font-display); font-size:1.05rem; margin-bottom:12px;">Configuration</h3>` +
+    ids.map(id=>{
+      const r = DATA.robots.find(x=>x.id===id);
+      const sel = devis.robots[id];
+      const hasA = r.prixAchat!=null && r.prixAchat>0;
+      const optsHtml = (r.options||[]).map(o=>`
+        <div class="opt-row">
+          <label><input type="checkbox" style="width:auto;" ${sel.options.includes(o.id)?'checked':''} onchange="toggleOption('${id}','${o.id}')"> ${o.nom}</label>
+          <span class="opt-price">+${fmt(o.prix)}</span>
+        </div>`).join("");
+      return `<div class="card" style="margin-bottom:12px;">
+        <div class="selection-row" style="border:none; padding-top:0;">
+          <div class="selection-thumb">${r.image?`<img src="${r.image}">`:'🤖'}</div>
+          <div style="flex:1;">
+            <div class="selection-name">${r.nom}</div>
+            <div class="selection-meta">${hasA? fmt(r.prixAchat) + ' / unité — dès ' + fmt(r.prixAchat*(DATA.financement.taux/100)) + '/mois' : 'Prix à renseigner dans Administration'}</div>
+          </div>
+          <div class="qty-ctrl">
+            <button onclick="changeQty('${id}',-1)">−</button>
+            <span>${sel.qty}</span>
+            <button onclick="changeQty('${id}',1)">+</button>
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="toggleRobot('${id}')">✕</button>
+        </div>
+        ${optsHtml? `<hr class="sep" style="margin:10px 0;">${optsHtml}` : ''}
+      </div>`;
+    }).join("");
+}
+function changeQty(id, delta){
+  const sel = devis.robots[id];
+  sel.qty = Math.max(1, sel.qty + delta);
+  renderAll();
+}
+function toggleOption(robotId, optId){
+  const sel = devis.robots[robotId];
+  const i = sel.options.indexOf(optId);
+  if(i>=0) sel.options.splice(i,1); else sel.options.push(optId);
+  renderAll();
+}
+
+function renderConsumSelect(){
+  const sel = document.getElementById("consum-select");
+  sel.innerHTML = DATA.consommables.map(c=>`<option value="${c.id}">${c.nom} — ${fmt(c.prix)}</option>`).join("");
+}
+function addConsumable(){
+  const id = document.getElementById("consum-select").value;
+  if(!id) return;
+  devis.consommables[id] = (devis.consommables[id]||0) + 1;
+  renderAll();
+}
+function renderConsumList(){
+  const wrap = document.getElementById("consum-list");
+  const ids = Object.keys(devis.consommables);
+  if(ids.length===0){ wrap.innerHTML = `<div style="color:var(--text-faint); font-size:0.82rem;">Aucun consommable ajouté.</div>`; return; }
+  wrap.innerHTML = ids.map(id=>{
+    const c = DATA.consommables.find(x=>x.id===id);
+    if(!c) return "";
+    const qty = devis.consommables[id];
+    return `<div class="selection-row">
+      <div style="flex:1;">
+        <div class="selection-name">${c.nom}</div>
+        <div class="selection-meta">${fmt(c.prix)} / ${c.unite}</div>
+      </div>
+      <div class="qty-ctrl">
+        <button onclick="changeConsumQty('${id}',-1)">−</button>
+        <span>${qty}</span>
+        <button onclick="changeConsumQty('${id}',1)">+</button>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="removeConsum('${id}')">✕</button>
+    </div>`;
+  }).join("");
+}
+function changeConsumQty(id, delta){
+  devis.consommables[id] = Math.max(1, (devis.consommables[id]||1) + delta);
+  renderAll();
+}
+function removeConsum(id){ delete devis.consommables[id]; renderAll(); }
+
+function computeTotals(){
+  let ht = 0;
+  Object.entries(devis.robots).forEach(([id,sel])=>{
+    const r = DATA.robots.find(x=>x.id===id); if(!r) return;
+    let unit = r.prixAchat||0;
+    sel.options.forEach(optId=>{
+      const o = (r.options||[]).find(x=>x.id===optId);
+      if(o) unit += o.prix;
+    });
+    ht += unit * sel.qty;
+  });
+  Object.entries(devis.consommables).forEach(([id,qty])=>{
+    const c = DATA.consommables.find(x=>x.id===id); if(!c) return;
+    ht += c.prix * qty;
+  });
+  const remiseVal = parseFloat(document.getElementById("remise-val")?.value ?? devis.remise.val ?? 0);
+  const remiseType = document.getElementById("remise-type")?.value || devis.remise.type;
+  devis.remise = {val: remiseVal, type: remiseType};
+  let remiseAmount = remiseType === "pct" ? ht * (remiseVal/100) : remiseVal;
+  remiseAmount = Math.min(remiseAmount, ht);
+  const htNet = ht - remiseAmount;
+  const tva = htNet * 0.20;
+  const ttc = htNet + tva;
+  const taux = DATA.financement.taux/100;
+  const mensualiteHT = htNet * taux;
+  const mensualiteTva = mensualiteHT * 0.20;
+  const mensualiteTtc = mensualiteHT + mensualiteTva;
+  return {ht, remiseAmount, htNet, tva, ttc, mensualiteHT, mensualiteTva, mensualiteTtc};
+}
+
+function renderSummary(){
+  const t = computeTotals();
+  const wrap = document.getElementById("summary-lines-dynamic");
+  const fin = DATA.financement;
+  wrap.innerHTML = `
+    <div class="sum-line"><span>Total HT</span><span>${fmt(t.ht)}</span></div>
+    <div class="sum-line"><span>Remise</span><span>− ${fmt(t.remiseAmount)}</span></div>
+    <div class="sum-line"><span>TVA (20%)</span><span>${fmt(t.tva)}</span></div>
+    <div class="sum-line total"><span>Comptant TTC</span><span class="val">${fmt(t.ttc)}</span></div>
+    <div class="sum-line total" style="font-size:1rem;"><span>ou ${fin.financeur} ${fin.duree} mois TTC</span><span class="val">${fmt(t.mensualiteTtc)}/mois</span></div>
+  `;
+}
+
+function renderAll(){
+  renderRobotGrid();
+  renderSelectedRobots();
+  renderConsumList();
+  renderSummary();
+}
+
+document.getElementById("remise-val").addEventListener("input", renderSummary);
+document.getElementById("remise-type").addEventListener("change", renderSummary);
+
+function resetDevis(){
+  devis = {client:{nom:"",societe:"",email:"",tel:""}, robots:{}, consommables:{}, remise:{val:0,type:"pct"}};
+  document.getElementById("cl-nom").value="";
+  document.getElementById("cl-societe").value="";
+  document.getElementById("cl-email").value="";
+  document.getElementById("cl-tel").value="";
+  document.getElementById("remise-val").value=0;
+  renderAll();
+}
+
+/* ================================================================
+   GENERATION DU DOCUMENT DEVIS
+   ================================================================ */
+let currentDevisNum = "";
+
+function genererDevis(){
+  const ids = Object.keys(devis.robots);
+  if(ids.length===0){ toast("Ajoutez au moins un robot avant de générer le devis."); return; }
+  devis.client = {
+    nom: document.getElementById("cl-nom").value,
+    societe: document.getElementById("cl-societe").value,
+    email: document.getElementById("cl-email").value,
+    tel: document.getElementById("cl-tel").value
+  };
+  currentDevisNum = "XR-" + new Date().toISOString().slice(0,10).replace(/-/g,"") + "-" + Math.floor(Math.random()*900+100);
+  renderDocument();
+  switchView("preview");
+}
+
+function renderDocument(){
+  const t = computeTotals();
+  const ent = DATA.entreprise;
+  const fin = DATA.financement;
+  const dateStr = new Date().toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'});
+
+  let robotCards = "";
+  Object.entries(devis.robots).forEach(([id,sel])=>{
+    const r = DATA.robots.find(x=>x.id===id); if(!r) return;
+    let unit = r.prixAchat||0;
+    let optNames = [];
+    sel.options.forEach(optId=>{
+      const o = (r.options||[]).find(x=>x.id===optId);
+      if(o){ unit += o.prix; optNames.push(o.nom); }
+    });
+    const lineTotal = unit*sel.qty;
+    const encartsHtml = (r.encarts||[]).slice(0,4).map(e=>
+      `<div class="doc-mini-spec"><b>${e.titre}</b>${e.texte}</div>`
+    ).join("");
+    robotCards += `
+    <div class="doc-robot-card">
+      <div class="doc-robot-photo">${r.image?`<img src="${r.image}">`:'<div class="doc-robot-noimg">Photo à ajouter</div>'}</div>
+      <div class="doc-robot-body">
+        <div class="doc-robot-eyebrow">${r.categorie}</div>
+        <div class="doc-robot-name">${r.nom}</div>
+        <div class="doc-robot-desc">${r.description||''}</div>
+        <div class="doc-mini-specs">${encartsHtml}</div>
+        ${optNames.length? `<div class="doc-robot-opts">+ ${optNames.join(', ')}</div>` : ''}
+        <div class="doc-robot-priceline">
+          <span class="doc-robot-qty">Qté ${sel.qty} × ${unit?fmt(unit):'—'}</span>
+          <span class="doc-robot-total">${unit?fmt(lineTotal):'Prix à confirmer'}</span>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  let consomRows = "";
+  Object.entries(devis.consommables).forEach(([id,qty])=>{
+    const c = DATA.consommables.find(x=>x.id===id); if(!c) return;
+    consomRows += `<tr><td>${c.nom}</td><td>${qty}</td><td>${fmt(c.prix)}</td><td>${fmt(c.prix*qty)}</td></tr>`;
+  });
+  const consomHtml = consomRows ? `
+    <div class="doc-section-label">Consommables</div>
+    <table class="doc-table-dark">
+      <thead><tr><th>Désignation</th><th>Qté</th><th>Prix unitaire</th><th>Total</th></tr></thead>
+      <tbody>${consomRows}</tbody>
+    </table>` : '';
+
+  const html = `
+  <div class="doc-page-dark">
+    <div class="doc-header-dark">
+      <div class="doc-logo-dark">XELER <span>ROBOTIQUE</span></div>
+      <div class="doc-meta-dark">${ent.adresse}<br>${ent.tel} — ${ent.email}</div>
+    </div>
+    <div class="doc-title-dark">Devis ${currentDevisNum}</div>
+    <div class="doc-sub-dark">Établi le ${dateStr} — Zone d'intervention : ${ent.zone}</div>
+
+    <div class="doc-client-dark">
+      <b>Client :</b> ${devis.client.nom || '—'} ${devis.client.societe? '— '+devis.client.societe : ''}<br>
+      ${devis.client.email? devis.client.email+' ' : ''}${devis.client.tel? '— '+devis.client.tel : ''}
+    </div>
+
+    ${robotCards}
+    ${consomHtml}
+
+    <div class="doc-totals-dark">
+      <div class="doc-totals-block">
+        <div class="doc-totals-title">Comptant</div>
+        <div class="row"><span>Total HT</span><span>${fmt(t.ht)}</span></div>
+        <div class="row"><span>Remise</span><span>− ${fmt(t.remiseAmount)}</span></div>
+        <div class="row"><span>TVA (20%)</span><span>${fmt(t.tva)}</span></div>
+        <div class="row total"><span>Total TTC</span><span>${fmt(t.ttc)}</span></div>
+      </div>
+      <div class="doc-totals-block accent">
+        <div class="doc-totals-title">Location ${fin.financeur} — ${fin.duree} mois</div>
+        <div class="row"><span>Mensualité HT</span><span>${fmt(t.mensualiteHT)}</span></div>
+        <div class="row"><span>TVA (20%)</span><span>${fmt(t.mensualiteTva)}</span></div>
+        <div class="row total"><span>Mensualité TTC</span><span>${fmt(t.mensualiteTtc)}/mois</span></div>
+      </div>
+    </div>
+    <div class="doc-fin-mention">${fin.mention}</div>
+
+    <div class="doc-foot-dark">
+      <span>${ent.mentions}</span>
+      <span>${ent.nom}</span>
+    </div>
+  </div>`;
+  document.getElementById("doc-container").innerHTML = html;
+  document.getElementById("preview-sub").textContent = `${currentDevisNum} — ${devis.client.societe || devis.client.nom || 'Client'}`;
+
+  // save to history
+  const hist = loadHistory();
+  hist.unshift({num: currentDevisNum, date: new Date().toISOString(), client: devis.client, devis: JSON.parse(JSON.stringify(devis)), total: t.ttc, mensualite: t.mensualiteTtc});
+  saveHistory(hist.slice(0,200));
+}
+
+/* ================================================================
+   EXPORT PDF
+   ================================================================ */
+function getDevisPdfBytes(){
+  return new Promise((resolve, reject)=>{
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({unit:"pt", format:"a4"});
+    const src = document.getElementById("doc-container");
+    doc.html(src, {
+      callback: function(doc){
+        try{
+          const bytes = doc.output("arraybuffer");
+          resolve(bytes);
+        }catch(e){ reject(e); }
+      },
+      x:20, y:20, width:555, windowWidth:820
+    });
+  });
+}
+
+async function buildMergedPdf(){
+  const devisBytes = await getDevisPdfBytes();
+  const { PDFDocument } = PDFLib;
+  const merged = await PDFDocument.load(devisBytes);
+
+  // Collect unique fiche PDFs for every robot in the current devis, in selection order
+  const fichePaths = [];
+  Object.keys(devis.robots).forEach(id=>{
+    const r = DATA.robots.find(x=>x.id===id);
+    if(r && r.fiche && !fichePaths.includes(r.fiche)) fichePaths.push(r.fiche);
+  });
+
+  let attachedCount = 0, failedCount = 0;
+  for(const path of fichePaths){
+    try{
+      const res = await fetch(path);
+      if(!res.ok) throw new Error("fetch failed");
+      const bytes = await res.arrayBuffer();
+      const ficheDoc = await PDFDocument.load(bytes);
+      const pages = await merged.copyPages(ficheDoc, ficheDoc.getPageIndices());
+      pages.forEach(p=>merged.addPage(p));
+      attachedCount++;
+    }catch(e){
+      console.warn("Impossible de joindre la fiche:", path, e);
+      failedCount++;
+    }
+  }
+  const finalBytes = await merged.save();
+  return { finalBytes, attachedCount, failedCount };
+}
+
+async function downloadPdf(){
+  try{
+    toast("Génération du PDF...");
+    const { finalBytes, attachedCount, failedCount } = await buildMergedPdf();
+    const blob = new Blob([finalBytes], {type:"application/pdf"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `Devis_${currentDevisNum}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+    if(attachedCount>0) toast(`PDF téléchargé avec ${attachedCount} fiche(s) technique(s) jointe(s).`);
+    else if(failedCount>0) toast("PDF téléchargé — certaines fiches n'ont pas pu être jointes (app non hébergée en ligne ?).");
+    else toast("PDF téléchargé.");
+  }catch(e){
+    console.error(e);
+    toast("Erreur lors de la génération du PDF.");
+  }
+}
+
+function openSendModal(){
+  const ent = DATA.entreprise, mail = DATA.mail;
+  if(!devis.client.email){ toast("Renseignez l'email du client avant l'envoi."); return; }
+  downloadPdf();
+  const subject = (mail.objet||"Votre devis Xeler Robotique — {NUM_DEVIS}").replace("{NUM_DEVIS}", currentDevisNum);
+  const body = (mail.message||"").replace("{CLIENT}", devis.client.nom||"").replace("{NUM_DEVIS}", currentDevisNum);
+  const mailto = `mailto:${devis.client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\n(Pensez à joindre le PDF téléchargé : Devis_"+currentDevisNum+".pdf)")}`;
+  setTimeout(()=>{ window.location.href = mailto; }, 800);
+}
+
+/* ================================================================
+   CATALOGUE
+   ================================================================ */
+function renderCatalogue(){
+  const grid = document.getElementById("catalogue-grid");
+  grid.innerHTML = DATA.robots.map(r=>`
+    <div class="card" style="cursor:pointer;" onclick="openFicheView('${r.id}')">
+      <div class="robot-thumb" style="border-radius:9px; margin-bottom:10px;">${r.image?`<img src="${r.image}">`:'🤖'}</div>
+      <div class="robot-brand-pill" style="position:static; display:inline-flex; margin-bottom:6px;">${r.brand}</div>
+      <div class="robot-name" style="font-size:1rem;">${r.nom}</div>
+      <div class="robot-cat" style="margin-bottom:8px;">${r.categorie}</div>
+      <div style="font-size:0.82rem; color:var(--text-soft); margin-bottom:10px;">${r.description||''}</div>
+      ${r.video? `<div class="video-embed" style="margin-bottom:10px;" onclick="event.stopPropagation()"><iframe src="${toEmbedUrl(r.video)}" allowfullscreen></iframe></div>` : ''}
+      <div class="link-row">
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); openFicheView('${r.id}')">📋 Fiche technique</button>
+        <button class="btn btn-outline btn-sm" onclick="event.stopPropagation(); chiffrerDepuisCatalogue('${r.id}')">⚡ Chiffrer</button>
+      </div>
+    </div>`).join("");
+}
+function toEmbedUrl(url){
+  const m = url.match(/(?:youtu\.be\/|v=)([\w-]{11})/);
+  return m ? `https://www.youtube.com/embed/${m[1]}` : url;
+}
+function chiffrerDepuisCatalogue(id){
+  if(!devis.robots[id]) devis.robots[id] = {qty:1, options:[]};
+  switchView("devis");
+  renderAll();
+}
+
+function openFicheView(id){
+  const r = DATA.robots.find(x=>x.id===id);
+  if(!r) return;
+  document.getElementById("fiche-title").textContent = r.nom;
+  document.getElementById("fiche-sub").textContent = `${r.brand} — ${r.categorie}`;
+  const content = document.getElementById("fiche-content");
+  if(r.fiche){
+    content.innerHTML = `<iframe class="fiche-pdf-frame" src="${r.fiche}"></iframe>
+      <div style="margin-top:10px; font-size:0.75rem; color:var(--text-faint);">Si la fiche ne s'affiche pas dans le cadre ci-dessus, <a href="${r.fiche}" target="_blank" style="color:var(--accent);">ouvrez-la dans un nouvel onglet</a>.</div>`;
+  } else {
+    const encartsHtml = (r.encarts||[]).map(e=>`<div class="doc-mini-spec" style="margin-bottom:6px;"><b>${e.titre}</b>${e.texte}</div>`).join("");
+    content.innerHTML = `<div class="fiche-fallback">
+      <div class="robot-thumb" style="border-radius:9px; margin-bottom:14px; width:200px;">${r.image?`<img src="${r.image}">`:'🤖'}</div>
+      <p style="color:var(--text-soft); margin-bottom:14px;">${r.description||''}</p>
+      <div class="doc-mini-specs" style="grid-template-columns:repeat(2,1fr);">${encartsHtml}</div>
+      <p style="color:var(--text-faint); font-size:0.75rem; margin-top:14px;">Aucune fiche technique constructeur n'est encore attachée à ce robot. Ajoutez le PDF dans Administration → Robots → Modifier → "Lien fiche technique".</p>
+    </div>`;
+  }
+  document.getElementById("fiche-chiffrer-btn").onclick = ()=>chiffrerDepuisCatalogue(id);
+  switchView("fiche");
+}
+
+/* ================================================================
+   HISTORIQUE
+   ================================================================ */
+function renderHistorique(){
+  const list = document.getElementById("historique-list");
+  const hist = loadHistory();
+  if(hist.length===0){ list.innerHTML = `<div class="empty-state"><div class="ic">⟲</div>Aucun devis enregistré pour le moment.</div>`; return; }
+  list.innerHTML = hist.map((h,i)=>`
+    <div class="admin-list-item">
+      <div style="flex:1;">
+        <div class="admin-item-name">${h.num} — ${h.client.societe || h.client.nom || 'Client'}</div>
+        <div class="admin-item-sub">${new Date(h.date).toLocaleDateString('fr-FR')} — ${fmt(h.total)}${h.mensualite? ' ou '+fmt(h.mensualite)+'/mois':''}</div>
+      </div>
+      <div class="admin-item-actions">
+        <button class="btn btn-ghost btn-sm" onclick="reprendreDevis(${i})">Rouvrir</button>
+        <button class="btn btn-danger btn-sm" onclick="supprimerDevis(${i})">Supprimer</button>
+      </div>
+    </div>`).join("");
+}
+function reprendreDevis(i){
+  const hist = loadHistory();
+  const h = hist[i];
+  devis = JSON.parse(JSON.stringify(h.devis));
+  currentDevisNum = h.num;
+  document.getElementById("cl-nom").value = devis.client.nom||"";
+  document.getElementById("cl-societe").value = devis.client.societe||"";
+  document.getElementById("cl-email").value = devis.client.email||"";
+  document.getElementById("cl-tel").value = devis.client.tel||"";
+  document.getElementById("remise-val").value = devis.remise.val||0;
+  document.getElementById("remise-type").value = devis.remise.type||"pct";
+  renderAll();
+  switchView("devis");
+}
+function supprimerDevis(i){
+  const hist = loadHistory();
+  hist.splice(i,1);
+  saveHistory(hist);
+  renderHistorique();
+}
+
+/* ================================================================
+   ADMIN — ROBOTS
+   ================================================================ */
+function renderAdminAll(){
+  renderAdminRobots();
+  renderAdminConsom();
+  const ent = DATA.entreprise;
+  document.getElementById("ent-nom").value = ent.nom;
+  document.getElementById("ent-adresse").value = ent.adresse;
+  document.getElementById("ent-tel").value = ent.tel;
+  document.getElementById("ent-email").value = ent.email;
+  document.getElementById("ent-zone").value = ent.zone;
+  document.getElementById("ent-mentions").value = ent.mentions;
+  const mail = DATA.mail;
+  document.getElementById("mail-adresse").value = mail.adresse;
+  document.getElementById("mail-objet").value = mail.objet;
+  document.getElementById("mail-message").value = mail.message;
+  document.getElementById("mail-ar").checked = mail.ar;
+  const fin = DATA.financement;
+  document.getElementById("fin-taux").value = fin.taux;
+  document.getElementById("fin-duree").value = fin.duree;
+  document.getElementById("fin-financeur").value = fin.financeur;
+  document.getElementById("fin-mention").value = fin.mention;
+}
+function saveFinancement(){
+  DATA.financement = {
+    taux: parseFloat(document.getElementById("fin-taux").value)||2.1,
+    duree: parseInt(document.getElementById("fin-duree").value)||60,
+    financeur: document.getElementById("fin-financeur").value.trim()||"Grenke",
+    mention: document.getElementById("fin-mention").value.trim()
+  };
+  saveData(); renderAll(); toast("Paramètres de financement enregistrés.");
+}
+
+function renderAdminRobots(){
+  const wrap = document.getElementById("admin-robot-list");
+  wrap.innerHTML = DATA.robots.map(r=>`
+    <div class="admin-list-item">
+      <div class="admin-thumb">${r.image?`<img src="${r.image}">`:'🤖'}</div>
+      <div style="flex:1;">
+        <div class="admin-item-name">${r.nom} <span class="pill">${r.brand}</span></div>
+        <div class="admin-item-sub">${r.categorie} — ${priceLabel(r)} — ${(r.options||[]).length} option(s)</div>
+      </div>
+      <div class="admin-item-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openRobotModal('${r.id}')">Modifier</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteRobot('${r.id}')">Suppr.</button>
+      </div>
+    </div>`).join("");
+}
+function deleteRobot(id){
+  if(!confirm("Supprimer ce robot du catalogue ?")) return;
+  DATA.robots = DATA.robots.filter(r=>r.id!==id);
+  delete devis.robots[id];
+  saveData(); renderAdminRobots(); renderAll(); toast("Robot supprimé.");
+}
+
+let editingRobotOptions = [];
+let editingRobotEncarts = [];
+let editingRobotImage = "";
+
+function handleRobotImageUpload(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  if(file.size > 2*1024*1024){
+    toast("Image trop lourde (max 2 Mo conseillé). Compressez-la avant l'envoi.");
+  }
+  const reader = new FileReader();
+  reader.onload = e=>{
+    editingRobotImage = e.target.result;
+    document.getElementById("rm-image").value = "";
+    updateRobotImagePreview();
+  };
+  reader.readAsDataURL(file);
+}
+function clearRobotImage(){
+  editingRobotImage = "";
+  document.getElementById("rm-image").value = "";
+  updateRobotImagePreview();
+}
+function updateRobotImagePreview(){
+  const prev = document.getElementById("rm-image-preview");
+  if(prev) prev.innerHTML = editingRobotImage ? `<img src="${editingRobotImage}">` : '🤖';
+}
+
+function openRobotModal(id){
+  const r = id ? DATA.robots.find(x=>x.id===id) : {id:"", brand:"", nom:"", categorie:"", image:"", prixAchat:null, description:"", encarts:[{titre:"",texte:""},{titre:"",texte:""},{titre:"",texte:""},{titre:"",texte:""}], options:[], brochure:"", fiche:"", video:""};
+  editingRobotOptions = JSON.parse(JSON.stringify(r.options||[]));
+  editingRobotEncarts = JSON.parse(JSON.stringify((r.encarts&&r.encarts.length===4)?r.encarts:[{titre:"",texte:""},{titre:"",texte:""},{titre:"",texte:""},{titre:"",texte:""}]));
+  editingRobotImage = r.image || "";
+
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.id = "robot-modal";
+  overlay.innerHTML = `
+    <div class="modal">
+      <div class="modal-head"><h3>${id? 'Modifier le robot':'Nouveau robot'}</h3><button class="close-x" onclick="closeModal('robot-modal')">✕</button></div>
+      <div class="field-row">
+        <div class="field"><label>Marque</label><input type="text" id="rm-brand" value="${esc(r.brand)}"></div>
+        <div class="field"><label>Catégorie</label><input type="text" id="rm-cat" value="${esc(r.categorie)}"></div>
+      </div>
+      <div class="field"><label>Nom du modèle</label><input type="text" id="rm-nom" value="${esc(r.nom)}"></div>
+      <div class="field"><label>Prix de vente HT (€) — la mensualité ${DATA.financement.financeur} (${DATA.financement.taux}%, ${DATA.financement.duree} mois) est calculée automatiquement</label><input type="number" id="rm-prix-achat" value="${r.prixAchat ?? ''}" placeholder="Laisser vide si prix non encore connu"></div>
+
+      <div class="field">
+        <label>Photo du robot</label>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div id="rm-image-preview" class="admin-thumb" style="width:56px; height:56px;">${editingRobotImage?`<img src="${editingRobotImage}">`:'🤖'}</div>
+          <label class="btn btn-ghost btn-sm" style="position:relative; overflow:hidden;">
+            Choisir un fichier
+            <input type="file" accept="image/*" style="position:absolute; inset:0; opacity:0; cursor:pointer;" onchange="handleRobotImageUpload(event)">
+          </label>
+          ${editingRobotImage?`<button class="btn btn-danger btn-sm" onclick="clearRobotImage()">Retirer</button>`:''}
+        </div>
+        <div style="font-size:0.7rem; color:var(--text-faint); margin-top:6px;">Ou collez une URL d'image :</div>
+        <input type="text" id="rm-image" value="${esc(r.image)}" placeholder="https://..." oninput="editingRobotImage=this.value; updateRobotImagePreview();">
+      </div>
+      <div class="field"><label>Description courte</label><textarea id="rm-desc" rows="2">${esc(r.description)}</textarea></div>
+
+      <div class="field"><label>4 encarts (sous la photo)</label>
+        <div id="rm-encarts"></div>
+      </div>
+
+      <div class="field-row">
+        <div class="field"><label>Lien brochure (PDF)</label><input type="text" id="rm-brochure" value="${esc(r.brochure)}"></div>
+        <div class="field"><label>Lien fiche technique</label><input type="text" id="rm-fiche" value="${esc(r.fiche)}"></div>
+      </div>
+      <div class="field"><label>Vidéo YouTube constructeur</label><input type="text" id="rm-video" value="${esc(r.video)}" placeholder="https://youtube.com/..."></div>
+
+      <div class="field"><label>Options (nom + prix HT)</label>
+        <div id="rm-options"></div>
+        <button class="btn btn-ghost btn-sm" onclick="addOptionRow()">+ Ajouter une option</button>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:16px;">
+        <button class="btn btn-primary" onclick="saveRobot('${id||''}')">Enregistrer</button>
+        <button class="btn btn-ghost" onclick="closeModal('robot-modal')">Annuler</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  renderEncartRows();
+  renderOptionRows();
+}
+function renderEncartRows(){
+  const wrap = document.getElementById("rm-encarts");
+  wrap.innerHTML = editingRobotEncarts.map((e,i)=>`
+    <div class="field-row" style="margin-bottom:6px;">
+      <input type="text" placeholder="Titre (ex: Autonomie)" value="${esc(e.titre)}" oninput="editingRobotEncarts[${i}].titre=this.value">
+      <input type="text" placeholder="Valeur (ex: 12h)" value="${esc(e.texte)}" oninput="editingRobotEncarts[${i}].texte=this.value">
+    </div>`).join("");
+}
+function addOptionRow(){ editingRobotOptions.push({id:"opt-"+Date.now(), nom:"", prix:0}); renderOptionRows(); }
+function renderOptionRows(){
+  const wrap = document.getElementById("rm-options");
+  wrap.innerHTML = editingRobotOptions.map((o,i)=>`
+    <div class="opt-edit-row">
+      <input type="text" placeholder="Nom option" value="${esc(o.nom)}" oninput="editingRobotOptions[${i}].nom=this.value">
+      <input type="number" placeholder="Prix" value="${o.prix}" style="max-width:100px;" oninput="editingRobotOptions[${i}].prix=parseFloat(this.value)||0">
+      <button class="btn btn-danger btn-sm" onclick="removeOptionRow(${i})">✕</button>
+    </div>`).join("");
+}
+function removeOptionRow(i){ editingRobotOptions.splice(i,1); renderOptionRows(); }
+
+function saveRobot(id){
+  const nom = document.getElementById("rm-nom").value.trim();
+  if(!nom){ toast("Le nom du robot est requis."); return; }
+  const data = {
+    id: id || "robot-"+Date.now(),
+    brand: document.getElementById("rm-brand").value.trim(),
+    nom, categorie: document.getElementById("rm-cat").value.trim(),
+    image: editingRobotImage || document.getElementById("rm-image").value.trim(),
+    prixAchat: document.getElementById("rm-prix-achat").value==="" ? null : parseFloat(document.getElementById("rm-prix-achat").value)||0,
+    description: document.getElementById("rm-desc").value.trim(),
+    encarts: editingRobotEncarts,
+    options: editingRobotOptions.filter(o=>o.nom.trim()!==""),
+    brochure: document.getElementById("rm-brochure").value.trim(),
+    fiche: document.getElementById("rm-fiche").value.trim(),
+    video: document.getElementById("rm-video").value.trim()
+  };
+  if(id){
+    const idx = DATA.robots.findIndex(r=>r.id===id);
+    DATA.robots[idx] = data;
+  } else {
+    DATA.robots.push(data);
+  }
+  saveData();
+  closeModal("robot-modal");
+  renderAdminRobots();
+  renderAll();
+  toast("Robot enregistré.");
+}
+
+/* ---------- Admin consommables ---------- */
+function renderAdminConsom(){
+  const wrap = document.getElementById("admin-consum-list");
+  wrap.innerHTML = DATA.consommables.map(c=>`
+    <div class="admin-list-item">
+      <div style="flex:1;">
+        <div class="admin-item-name">${c.nom}</div>
+        <div class="admin-item-sub">${fmt(c.prix)} / ${c.unite}</div>
+      </div>
+      <div class="admin-item-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openConsumModal('${c.id}')">Modifier</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteConsum('${c.id}')">Suppr.</button>
+      </div>
+    </div>`).join("");
+}
+function deleteConsum(id){
+  if(!confirm("Supprimer ce consommable ?")) return;
+  DATA.consommables = DATA.consommables.filter(c=>c.id!==id);
+  saveData(); renderAdminConsom(); toast("Consommable supprimé.");
+}
+function openConsumModal(id){
+  const c = id ? DATA.consommables.find(x=>x.id===id) : {id:"", nom:"", prix:0, unite:"unité"};
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.id = "consum-modal";
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-head"><h3>${id?'Modifier':'Nouveau'} consommable</h3><button class="close-x" onclick="closeModal('consum-modal')">✕</button></div>
+      <div class="field"><label>Nom</label><input type="text" id="cm-nom" value="${esc(c.nom)}"></div>
+      <div class="field-row">
+        <div class="field"><label>Prix HT (€)</label><input type="number" id="cm-prix" value="${c.prix}"></div>
+        <div class="field"><label>Unité</label><input type="text" id="cm-unite" value="${esc(c.unite)}"></div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <button class="btn btn-primary" onclick="saveConsum('${id||''}')">Enregistrer</button>
+        <button class="btn btn-ghost" onclick="closeModal('consum-modal')">Annuler</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+function saveConsum(id){
+  const nom = document.getElementById("cm-nom").value.trim();
+  if(!nom){ toast("Le nom est requis."); return; }
+  const data = {id: id || "consum-"+Date.now(), nom, prix: parseFloat(document.getElementById("cm-prix").value)||0, unite: document.getElementById("cm-unite").value.trim()||"unité"};
+  if(id){ const idx = DATA.consommables.findIndex(c=>c.id===id); DATA.consommables[idx]=data; }
+  else{ DATA.consommables.push(data); }
+  saveData(); closeModal("consum-modal"); renderAdminConsom(); toast("Consommable enregistré.");
+}
+
+function closeModal(id){ const el = document.getElementById(id); if(el) el.remove(); }
+function esc(s){ return (s||"").toString().replace(/"/g,"&quot;"); }
+
+/* ---------- Admin entreprise / mail ---------- */
+function saveEntreprise(){
+  DATA.entreprise = {
+    nom: document.getElementById("ent-nom").value,
+    adresse: document.getElementById("ent-adresse").value,
+    tel: document.getElementById("ent-tel").value,
+    email: document.getElementById("ent-email").value,
+    zone: document.getElementById("ent-zone").value,
+    mentions: document.getElementById("ent-mentions").value
+  };
+  saveData(); toast("Informations entreprise enregistrées.");
+}
+function saveMailSettings(){
+  DATA.mail = {
+    adresse: document.getElementById("mail-adresse").value,
+    objet: document.getElementById("mail-objet").value,
+    message: document.getElementById("mail-message").value,
+    ar: document.getElementById("mail-ar").checked
+  };
+  saveData(); toast("Paramètres email enregistrés.");
+}
+
+/* ---------- Export / import ---------- */
+function exportData(){
+  const blob = new Blob([JSON.stringify(DATA, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `xeler_catalogue_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast("Catalogue exporté.");
+}
+function importData(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const parsed = JSON.parse(e.target.result);
+      DATA = parsed;
+      saveData();
+      renderAdminAll();
+      renderAll();
+      toast("Catalogue importé avec succès.");
+    }catch(err){ toast("Fichier invalide."); }
+  };
+  reader.readAsText(file);
+}
+
+/* ================================================================
+   INIT
+   ================================================================ */
+renderConsumSelect();
+renderAll();
+
+/* PWA service worker registration */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
