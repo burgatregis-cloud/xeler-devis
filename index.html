@@ -1121,87 +1121,325 @@ function renderDocument(){
 /* ================================================================
    EXPORT PDF
    ================================================================ */
-function getDevisPdfBytes(){
-  return new Promise((resolve, reject)=>{
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({unit:"pt", format:"a4"});
-    const src = document.getElementById("doc-container");
-    doc.html(src, {
-      callback: function(doc){
-        try{
-          const bytes = doc.output("arraybuffer");
-          resolve(bytes);
-        }catch(e){ reject(e); }
-      },
-      x:20, y:20, width:555, windowWidth:820
-    });
-  });
-}
-
-async function buildMergedPdf(){
-  const devisBytes = await getDevisPdfBytes();
-  const { PDFDocument } = PDFLib;
-  const merged = await PDFDocument.load(devisBytes);
-
-  // Collect unique fiche PDFs for every robot in the current devis, in selection order
-  const fichePaths = [];
-  Object.keys(devis.robots).forEach(id=>{
-    const r = DATA.robots.find(x=>x.id===id);
-    if(r && r.fiche && !fichePaths.includes(r.fiche)) fichePaths.push(r.fiche);
-  });
-
-  let attachedCount = 0, failedCount = 0;
-  for(const path of fichePaths){
-    try{
-      const res = await fetch(path);
-      if(!res.ok) throw new Error("fetch failed");
-      const bytes = await res.arrayBuffer();
-      const ficheDoc = await PDFDocument.load(bytes);
-      const pages = await merged.copyPages(ficheDoc, ficheDoc.getPageIndices());
-      pages.forEach(p=>merged.addPage(p));
-      attachedCount++;
-    }catch(e){
-      console.warn("Impossible de joindre la fiche:", path, e);
-      failedCount++;
+const PDF_COLORS = {
+    accent: [255,86,55],
+    accentDark: [214,67,31],
+    dark: [12,18,32],
+    textSoft: [90,95,105],
+    textFaint: [140,145,155],
+    border: [225,227,232],
+    panelBg: [246,247,249]
+};
+  
+  function loadImageAsDataUrl(url){
+      return new Promise((resolve)=>{
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = ()=>{
+                    try{
+                              const canvas = document.createElement("canvas");
+                              canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+                              const ctx = canvas.getContext("2d");
+                              ctx.drawImage(img,0,0);
+                              resolve(canvas.toDataURL("image/jpeg", 0.9));
+                    }catch(e){ resolve(null); }
+            };
+            img.onerror = ()=>resolve(null);
+            img.src = url;
+      });
+  }
+  
+  async function getDevisPdfBytes(){
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({unit:"mm", format:"a4"});
+      const PW = 210, PH = 297, MX = 16;
+      const usableW = PW - MX*2;
+      let y = 16;
+    
+      function ensureSpace(h){
+            if(y + h > PH - 18){ doc.addPage(); y = 16; }
+      }
+      function setColor(c){ doc.setTextColor(c[0],c[1],c[2]); }
+      function setFill(c){ doc.setFillColor(c[0],c[1],c[2]); }
+      function setDraw(c){ doc.setDrawColor(c[0],c[1],c[2]); }
+    
+      const t = computeTotals();
+      const ent = DATA.entreprise;
+      const fin = DATA.financement;
+      const dateStr = new Date().toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'});
+    
+      // ---- Header ----
+      doc.setFont("helvetica","bold"); doc.setFontSize(16);
+      setColor(PDF_COLORS.dark);
+      doc.text("XELER", MX, y+5);
+      const xelerW = doc.getTextWidth("XELER ");
+      setColor(PDF_COLORS.accent);
+      doc.text("ROBOTIQUE", MX + xelerW, y+5);
+    
+      doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
+      setColor(PDF_COLORS.textSoft);
+      doc.text(ent.adresse||"", PW-MX, y+1, {align:"right"});
+      doc.text(`${ent.tel||""} — ${ent.email||""}`, PW-MX, y+5, {align:"right"});
+    
+      y += 9;
+      setDraw(PDF_COLORS.accent); doc.setLineWidth(0.8);
+      doc.line(MX, y, PW-MX, y);
+      y += 8;
+    
+      doc.setFont("helvetica","bold"); doc.setFontSize(15);
+    setColor(PDF_COLORS.dark);
+      doc.text(`Devis ${currentDevisNum}`, MX, y);
+      y += 6;
+      doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
+      setColor(PDF_COLORS.textFaint);
+      doc.text(`Établi le ${dateStr} — Zone d'intervention : ${ent.zone||""}`, MX, y);
+      y += 7;
+    
+      // ---- Client box ----
+      const clientLine1 = `${devis.client.nom||'—'}${devis.client.societe? '  —  '+devis.client.societe : ''}`;
+      const clientLine2 = `${devis.client.email||''}${devis.client.tel? '  —  '+devis.client.tel : ''}`;
+      setFill(PDF_COLORS.panelBg);
+      doc.roundedRect(MX, y, usableW, 14, 2, 2, "F");
+          doc.setFont("helvetica","bold"); doc.setFontSize(9.5);
+      setColor(PDF_COLORS.dark);
+      doc.text("Client : " + clientLine1, MX+4, y+6);
+      doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
+      setColor(PDF_COLORS.textSoft);
+      if(clientLine2.trim()) doc.text(clientLine2, MX+4, y+11);
+                                                                        y += 20;
+    
+      // ---- Robot cards ----
+    for(const [id, sel] of Object.entries(devis.robots)){
+          const r = DATA.robots.find(x=>x.id===id); if(!r) continue;
+          let unit = r.prixAchat||0;
+          let optNames = [];
+          sel.options.forEach(optId=>{
+                  const o = (r.options||[]).find(x=>x.id===optId);
+                  if(o){ unit += o.prix; optNames.push(o.nom); }
+          });
+          const lineTotal = unit*sel.qty;
+      
+          const descLines = doc.splitTextToSize(r.description||"", usableW - 42);
+          const encarts = (r.encarts||[]).slice(0,4);
+          const cardH = 8 + descLines.length*4 + (encarts.length?7:0) + (optNames.length?5:0) + 8 + 4;
+          ensureSpace(cardH);
+      
+          const cardTop = y;
+          setDraw(PDF_COLORS.border); doc.setLineWidth(0.3);
+          setFill([255,255,255]);
+          doc.roundedRect(MX, y, usableW, cardH, 2, 2, "S");
+      
+          // image
+          const imgBoxSize = 30;
+          if(r.image){
+                  const dataUrl = await loadImageAsDataUrl(r.image);
+                  if(dataUrl){
+                            try{ doc.addImage(dataUrl, "JPEG", MX+3, y+3, imgBoxSize, imgBoxSize, undefined, "FAST"); }catch(e){}
+                  }
+          }
+          const textX = MX + imgBoxSize + 8;
+          const textW = usableW - imgBoxSize - 12;
+          let ty = y + 6;
+          doc.setFont("helvetica","bold"); doc.setFontSize(6.8);
+          setColor(PDF_COLORS.accent);
+          doc.text((r.categorie||"").toUpperCase(), textX, ty);
+          ty += 4.5;
+          doc.setFont("helvetica","bold"); doc.setFontSize(11);
+          setColor(PDF_COLORS.dark);
+          doc.text(r.nom, textX, ty);
+          ty += 5;
+          doc.setFont("helvetica","normal"); doc.setFontSize(7.8);
+          setColor(PDF_COLORS.textSoft);
+          doc.text(descLines, textX, ty);
+          ty += descLines.length*3.6 + 1;
+      
+          if(encarts.length){
+                  const colW = textW/4;
+                  encarts.forEach((e,i)=>{
+                            const ex = textX + i*colW;
+                            doc.setFont("helvetica","bold"); doc.setFontSize(6);
+                            setColor(PDF_COLORS.accentDark);
+                            doc.text((e.titre||"").toUpperCase(), ex, ty, {maxWidth: colW-2});
+                            doc.setFont("helvetica","normal"); doc.setFontSize(7);
+                            setColor(PDF_COLORS.dark);
+                            doc.text(e.texte||"", ex, ty+3.2, {maxWidth: colW-2});
+                  });
+                  ty += 7;
+      }
+      if(optNames.length){
+              doc.setFont("helvetica","italic"); doc.setFontSize(7);
+              setColor(PDF_COLORS.textFaint);
+              doc.text("+ "+optNames.join(", "), textX, ty, {maxWidth: textW});
+              ty += 4.5;
+      }
+      
+          // price line
+          const priceY = cardTop + cardH - 4;
+          setDraw(PDF_COLORS.border); doc.setLineWidth(0.2);
+          doc.line(textX, priceY-3, MX+usableW-3, priceY-3);
+          doc.setFont("helvetica","normal"); doc.setFontSize(8);
+          setColor(PDF_COLORS.textSoft);
+          doc.text(`Qté ${sel.qty} × ${unit?fmt(unit):'—'}`, textX, priceY);
+          doc.setFont("helvetica","bold"); doc.setFontSize(9.5);
+          setColor(PDF_COLORS.accent);
+          doc.text(unit?fmt(lineTotal):'Prix à confirmer', MX+usableW-3, priceY, {align:"right"});
+      
+          y = cardTop + cardH + 4;
     }
+    
+      // ---- Consommables ----
+      const consomEntries = Object.entries(devis.consommables).filter(([id])=>DATA.consommables.find(c=>c.id===id));
+      if(consomEntries.length){
+            ensureSpace(8 + consomEntries.length*6 + 4);
+            doc.setFont("helvetica","bold"); doc.setFontSize(9);
+            setColor(PDF_COLORS.dark);
+            doc.text("Consommables", MX, y); y += 5;
+            setFill(PDF_COLORS.dark);
+                doc.rect(MX, y, usableW, 6, "F");
+            doc.setFont("helvetica","bold"); doc.setFontSize(7);
+            setColor([255,255,255]);
+            doc.text("DÉSIGNATION", MX+3, y+4);
+      doc.text("QTÉ", MX+usableW-55, y+4);
+      doc.text("PRIX UNITAIRE", MX+usableW-38, y+4);
+            doc.text("TOTAL", MX+usableW-3, y+4, {align:"right"});
+            y += 6;
+            consomEntries.forEach(([id,qty],i)=>{
+                    const c = DATA.consommables.find(x=>x.id===id);
+                    if(i%2===1){ setFill(PDF_COLORS.panelBg); doc.rect(MX, y, usableW, 6, "F"); }
+        doc.setFont("helvetica","normal"); doc.setFontSize(8);
+                    setColor(PDF_COLORS.dark);
+                    doc.text(c.nom, MX+3, y+4);
+        doc.text(String(qty), MX+usableW-55, y+4);
+                    doc.text(fmt(c.prix), MX+usableW-38, y+4);
+                    doc.text(fmt(c.prix*qty), MX+usableW-3, y+4, {align:"right"});
+                                                                    y += 6;
+            });
+          y += 4;
+      }
+    
+      // ---- Totals ----
+      const hasMensualite = t.mensualiteTtc > 0;
+      const boxW = hasMensualite ? (usableW-6)/2 : usableW;
+      ensureSpace(38);
+      const boxTop = y;
+      const boxH = 34;
+    
+      function totalsBox(x, w, title, rows, highlight){
+            setDraw(PDF_COLORS.border); doc.setLineWidth(0.3);
+            setFill(highlight ? [255,243,240] : PDF_COLORS.panelBg);
+            doc.roundedRect(x, boxTop, w, boxH, 2, 2, "F");
+            let by = boxTop + 6;
+            doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
+            setColor(PDF_COLORS.dark);
+            doc.text(title, x+4, by);
+            by += 5.5;
+            rows.forEach((row,i)=>{
+                    const isLast = i===rows.length-1;
+                    doc.setFont("helvetica", isLast?"bold":"normal");
+                    doc.setFontSize(isLast?9.5:8);
+                    setColor(isLast? PDF_COLORS.accent : PDF_COLORS.textSoft);
+                    doc.text(row[0], x+4, by);
+                    doc.text(row[1], x+w-4, by, {align:"right"});
+                    by += isLast?5.5:4.5;
+            });
+      }
+    
+      totalsBox(MX, boxW, "Comptant", [
+            ["Total HT", fmt(t.ht)],
+            ["Remise", "− "+fmt(t.remiseAmount)],
+            ["TVA (20%)", fmt(t.tva)],
+      ["Total TTC", fmt(t.ttc)]
+          ], false);
+    
+      if(hasMensualite){
+            totalsBox(MX+boxW+6, boxW, `Location ${fin.financeur} — ${fin.duree} mois`, [
+                    ["Mensualité HT", fmt(t.mensualiteHT)],
+                    ["TVA (20%)", fmt(t.mensualiteTva)],
+                    ["Mensualité TTC", fmt(t.mensualiteTtc)+"/mois"]
+                  ], true);
+      }
+      y = boxTop + boxH + 4;
+    
+      if(hasMensualite && fin.mention){
+            doc.setFont("helvetica","normal"); doc.setFontSize(6.3);
+            setColor(PDF_COLORS.textFaint);
+            const mentionLines = doc.splitTextToSize(fin.mention, usableW);
+            doc.text(mentionLines, MX, y);
+            y += mentionLines.length*3 + 3;
+      }
+    
+      // ---- Footer ----
+      ensureSpace(10);
+      setDraw(PDF_COLORS.border); doc.setLineWidth(0.2);
+      doc.line(MX, y, PW-MX, y); y += 4;
+      doc.setFont("helvetica","normal"); doc.setFontSize(7);
+      setColor(PDF_COLORS.textFaint);
+      doc.text(ent.mentions||"", MX, y, {maxWidth: usableW*0.7});
+      doc.text(ent.nom||"", PW-MX, y, {align:"right"});
+    
+      return doc.output("arraybuffer");
   }
-  const finalBytes = await merged.save();
-  return { finalBytes, attachedCount, failedCount };
-}
-
-async function downloadPdf(){
-  try{
-    toast("Génération du PDF...");
-    const { finalBytes, attachedCount, failedCount } = await buildMergedPdf();
-    const blob = new Blob([finalBytes], {type:"application/pdf"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `Devis_${currentDevisNum}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
-    if(attachedCount>0) toast(`PDF téléchargé avec ${attachedCount} fiche(s) technique(s) jointe(s).`);
-    else if(failedCount>0) toast("PDF téléchargé — certaines fiches n'ont pas pu être jointes (app non hébergée en ligne ?).");
-    else toast("PDF téléchargé.");
-  }catch(e){
-    console.error(e);
-    toast("Erreur lors de la génération du PDF.");
+  
+  async function buildMergedPdf(){
+      const devisBytes = await getDevisPdfBytes();
+      const { PDFDocument } = PDFLib;
+      const merged = await PDFDocument.load(devisBytes);
+    
+      // Collect unique fiche PDFs for every robot in the current devis, in selection order
+      const fichePaths = [];
+      Object.keys(devis.robots).forEach(id=>{
+            const r = DATA.robots.find(x=>x.id===id);
+            if(r && r.fiche && !fichePaths.includes(r.fiche)) fichePaths.push(r.fiche);
+      });
+    
+      let attachedCount = 0, failedCount = 0;
+      for(const path of fichePaths){
+            try{
+                    const res = await fetch(path);
+                    if(!res.ok) throw new Error("fetch failed");
+                    const bytes = await res.arrayBuffer();
+                    const ficheDoc = await PDFDocument.load(bytes);
+                    const pages = await merged.copyPages(ficheDoc, ficheDoc.getPageIndices());
+                    pages.forEach(p=>merged.addPage(p));
+                    attachedCount++;
+            }catch(e){
+                    console.warn("Impossible de joindre la fiche:", path, e);
+                    failedCount++;
+            }
+      }
+      const finalBytes = await merged.save();
+      return { finalBytes, attachedCount, failedCount };
   }
-}
-
-function openSendModal(){
-  const ent = DATA.entreprise, mail = DATA.mail;
-  if(!devis.client.email){ toast("Renseignez l'email du client avant l'envoi."); return; }
-  downloadPdf();
-  const subject = (mail.objet||"Votre devis Xeler Robotique — {NUM_DEVIS}").replace("{NUM_DEVIS}", currentDevisNum);
-  const body = (mail.message||"").replace("{CLIENT}", devis.client.nom||"").replace("{NUM_DEVIS}", currentDevisNum);
-  const mailto = `mailto:${devis.client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\n(Pensez à joindre le PDF téléchargé : Devis_"+currentDevisNum+".pdf)")}`;
-  setTimeout(()=>{ window.location.href = mailto; }, 800);
-}
-
-/* ================================================================
-   CATALOGUE
-   ================================================================ */
-function renderCatalogue(){
+  
+  async function downloadPdf(){
+      try{
+            toast("Génération du PDF...");
+            const { finalBytes, attachedCount, failedCount } = await buildMergedPdf();
+            const blob = new Blob([finalBytes], {type:"application/pdf"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url; a.download = `Devis_${currentDevisNum}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+            if(attachedCount>0) toast(`PDF téléchargé avec ${attachedCount} fiche(s) technique(s) jointe(s).`);
+            else if(failedCount>0) toast("PDF téléchargé — certaines fiches n'ont pas pu être jointes (app non hébergée en ligne ?).");
+            else toast("PDF téléchargé.");
+      }catch(e){
+            console.error(e);
+            toast("Erreur lors de la génération du PDF : " + (e && e.message ? e.message : e));
+      }
+  }
+  
+  function openSendModal(){
+    const ent = DATA.entreprise, mail = DATA.mail;
+      if(!devis.client.email){ toast("Renseignez l'email du client avant l'envoi."); return; }
+      downloadPdf();
+      const subject = (mail.objet||"Votre devis Xeler Robotique — {NUM_DEVIS}").replace("{NUM_DEVIS}", currentDevisNum);
+      const body = (mail.message||"").replace("{CLIENT}", devis.client.nom||"").replace("{NUM_DEVIS}", currentDevisNum);
+      const mailto = `mailto:${devis.client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\n(Pensez à joindre le PDF téléchargé : Devis_"+currentDevisNum+".pdf)")}`;
+      setTimeout(()=>{ window.location.href = mailto; }, 800);
+  }
+  function renderCatalogue(){
   const grid = document.getElementById("catalogue-grid");
   grid.innerHTML = DATA.robots.map(r=>`
     <div class="card" style="cursor:pointer;" onclick="openFicheView('${r.id}')">
