@@ -1133,442 +1133,436 @@ function renderDocument(){
    ================================================================ */
 const XELER_LOGO_DATAURL = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBAUEBAYFBQUGBgYHCQ4JCQgICRINDQoOFRIWFhUSFBQXGiEcFxgfGRQUHScdHyIjJSUlFhwpLCgkKyEkJST/2wBDAQYGBgkICREJCREkGBQYJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCT/wAARCABqAWgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//9k="
   
-  const PDF_COLORS = {
-      accent: [255,86,55],
-      accentDark: [214,67,31],
-      dark: [12,18,32],
-      textSoft: [90,95,105],
-      textFaint: [140,145,155],
-      border: [225,227,232],
-      panelBg: [246,247,249]
-  };
+  function dataUrlToBytes(dataUrl){
+    const base64 = dataUrl.split(",")[1];
+                        const binary = atob(base64);
+                        const bytes = new Uint8Array(binary.length);
+                        for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+                        return bytes;
+                    }
+              async function fetchImageBytes(url){
+                  try{
+                        const res = await fetch(url);
+                        if(!res.ok) return null;
+                        return new Uint8Array(await res.arrayBuffer());
+                  }catch(e){ return null; }
+              }
+              
+              /* Génération du PDF entièrement via pdf-lib (aucune dépendance à jsPDF/html2canvas).
+                 pdf-lib produit des fichiers strictement conformes, compatibles Adobe Acrobat. */
+              async function getDevisPdfBytes(){
+                  const { PDFDocument, StandardFonts, rgb } = PDFLib;
+    const pdfDoc = await PDFDocument.create();
+    const M = 2.834645669; // mm -> pt
+           const PWmm = 210, PHmm = 297, MXmm = 16;
+      const usableWmm = PWmm - MXmm*2;
+                
+                  const fontReg = await pdfDoc.embedFont(StandardFonts.Helvetica);
+                  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+                  const fontItalic = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
+                
+                  const C = {
+                        accent: rgb(255/255,86/255,55/255),
+                        accentDark: rgb(214/255,67/255,31/255),
+                        dark: rgb(12/255,18/255,32/255),
+                        textSoft: rgb(90/255,95/255,105/255),
+                        textFaint: rgb(140/255,145/255,155/255),
+                        border: rgb(225/255,227/255,232/255),
+      panelBg: rgb(246/255,247/255,249/255),
+                        panelAccentBg: rgb(255/255,243/255,240/255),
+                        white: rgb(1,1,1),
+                        black: rgb(0,0,0)
+                  };
+                
+                  let page = pdfDoc.addPage([PWmm*M, PHmm*M]);
+                  let y = 16;
+                
+                  function mmX(xmm){ return xmm*M; }
+                  function mmY(ymm){ return (PHmm-ymm)*M; }
+                
+                  function txt(str, xmm, ymm, {size=8, font=fontReg, color=C.dark, align="left"}={}){
+                        str = str==null ? "" : String(str);
+                        if(!str) return;
+                        let xpt = mmX(xmm);
+                        const w = font.widthOfTextAtSize(str, size);
+                        if(align==="right") xpt -= w;
+                        else if(align==="center") xpt -= w/2;
+                        try{ page.drawText(str, {x:xpt, y:mmY(ymm), size, font, color}); }catch(e){}
+  }
+        function wrapText(str, maxWmm, font, size){
+              const maxWpt = maxWmm*M;
+              const words = (str||"").split(/\s+/).filter(Boolean);
+              const lines = []; let cur = "";
+              words.forEach(w=>{
+                      const test = cur? cur+" "+w : w;
+                      if(font.widthOfTextAtSize(test, size) > maxWpt && cur){ lines.push(cur); cur = w; }
+        else cur = test;
+  });
+              if(cur) lines.push(cur);
+              return lines.length ? lines : [""];
+        }
+                  function txtBlock(lines, xmm, ymm, lineHmm, opts){
+                        lines.forEach((l,i)=> txt(l, xmm, ymm + i*lineHmm, opts));
+                  }
+                  function rectMM(xmm, ymm, wmm, hmm, {fill=null, stroke=null, strokeWidth=0.3}={}){
+                        const opts = {x:mmX(xmm), y:mmY(ymm+hmm), width:wmm*M, height:hmm*M};
+                        if(fill) opts.color = fill;
+      if(stroke){ opts.borderColor = stroke; opts.borderWidth = strokeWidth*M; }
+                        page.drawRectangle(opts);
+      }
+          function lineMM(x1,y1,x2,y2,{color=C.border, width=0.3}={}){
+             page.drawLine({start:{x:mmX(x1),y:mmY(y1)}, end:{x:mmX(x2),y:mmY(y2)}, thickness:width*M, color});
+    }
+    async function imgMM(bytes, xmm, ymm, wmm, hmm){
+        if(!bytes) return;
+        try{
+        const img = await pdfDoc.embedJpg(bytes);
+                const dims = img.scale(1);
+            const ratio = dims.width/dims.height;
+                let dw = wmm, dh = hmm;
+                if(ratio > wmm/hmm) dh = wmm/ratio; else dw = hmm*ratio;
+                const ox = xmm + (wmm-dw)/2, oy = ymm + (hmm-dh)/2;
+        page.drawImage(img, {x:mmX(ox), y:mmY(oy+dh), width:dw*M, height:dh*M});
+  }catch(e){}
+  }
+    function checkbox(xmm, ymm, sizeMm, label, {font=fontReg, size=7.3, color=C.dark}={}){
+              rectMM(xmm, ymm-sizeMm+1.2, sizeMm, sizeMm, {stroke:C.textFaint, strokeWidth:0.35});
+          txt(label, xmm+sizeMm+2.5, ymm, {size, font, color});
+    }
+                  function ensureSpace(hmm){
+      if(y + hmm > PHmm - 20){ page = pdfDoc.addPage([PWmm*M, PHmm*M]); y = 16; return true; }
+            return false;
+                  }
+                
+                  const t = computeTotals();
+                  const ent = DATA.entreprise;
+                  const fin = DATA.financement;
+                  const rib = ent.rib || {};
+        const maint = DATA.maintenance || {};
+    const dateStr = new Date().toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'});
   
-  function loadImageAsDataUrl(url){
-      return new Promise((resolve)=>{
-            const img = new Image();
-      img.crossOrigin = "anonymous";
-            img.onload = ()=>{
-                    try{
-                              const canvas = document.createElement("canvas");
-                              canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
-                              const ctx = canvas.getContext("2d");
-                              ctx.drawImage(img,0,0);
-                              resolve(canvas.toDataURL("image/jpeg", 0.9));
-                    }catch(e){ resolve(null); }
-            };
-            img.onerror = ()=>resolve(null);
-            img.src = url;
-      });
+    const logoBytes = (typeof XELER_LOGO_DATAURL !== "undefined" && XELER_LOGO_DATAURL) ? dataUrlToBytes(XELER_LOGO_DATAURL) : null;
+  
+    async function drawHeader(){
+      if(logoBytes){
+        try{
+          const img = await pdfDoc.embedJpg(logoBytes);
+          const dims = img.scale(1);
+          const logoH = 9, logoW = logoH * (dims.width/dims.height);
+                                                    page.drawImage(img, {x:mmX(MXmm), y:mmY(y-2+logoH), width:logoW*M, height:logoH*M});
+  }catch(e){
+                    txt("XELER", MXmm, y+5, {size:16, font:fontBold, color:C.dark});
+                                                           const xelerWmm = fontBold.widthOfTextAtSize("XELER ", 16)/M;
+          txt("ROBOTIQUE", MXmm+xelerWmm, y+5, {size:16, font:fontBold, color:C.accent});
+  }
+  } else {
+        txt("XELER", MXmm, y+5, {size:16, font:fontBold, color:C.dark});
+        const xelerWmm = fontBold.widthOfTextAtSize("XELER ", 16)/M;
+            txt("ROBOTIQUE", MXmm+xelerWmm, y+5, {size:16, font:fontBold, color:C.accent});
+  }
+             txt(ent.adresse||"", PWmm-MXmm, y+1, {size:8.5, color:C.textSoft, align:"right"});
+      txt(`${ent.tel||""} — ${ent.email||""}`, PWmm-MXmm, y+5, {size:8.5, color:C.textSoft, align:"right"});
+      y += 9;
+      lineMM(MXmm, y, PWmm-MXmm, y, {color:C.accent, width:0.8});
+          y += 8;
   }
   
-  async function getDevisPdfBytes(){
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({unit:"mm", format:"a4"});
-      const PW = 210, PH = 297, MX = 16;
-      const usableW = PW - MX*2;
-      let y = 16;
-    
-      function ensureSpace(h){
-            if(y + h > PH - 20){ doc.addPage(); y = 16; return true; }
-            return false;
+    await drawHeader();
+  
+    txt(`Devis ${currentDevisNum}`, MXmm, y, {size:15, font:fontBold, color:C.dark});
+                  y += 6;
+    txt(`Établi le ${dateStr} — Zone d'intervention : ${ent.zone||""}`, MXmm, y, {size:8.5, color:C.textFaint});
+        y += 7;
+      
+    // ---- Client box ----
+                  const clientLine1 = `${devis.client.nom||'—'}${devis.client.societe? '  —  '+devis.client.societe : ''}`;
+    const clientLine2 = `${devis.client.email||''}${devis.client.tel? '  —  '+devis.client.tel : ''}`;
+                                            rectMM(MXmm, y, usableWmm, 14, {fill:C.panelBg});
+                  txt("Client : " + clientLine1, MXmm+4, y+6, {size:9.5, font:fontBold, color:C.dark});
+      if(clientLine2.trim()) txt(clientLine2, MXmm+4, y+11, {size:8.5, color:C.textSoft});
+                  y += 20;
+                
+                  // ---- Robot cards ----
+                  for(const [id, sel] of Object.entries(devis.robots)){
+      const r = DATA.robots.find(x=>x.id===id); if(!r) continue;
+                        let unit = r.prixAchat||0;
+                        let optNames = [];
+                        sel.options.forEach(optId=>{
+                                const o = (r.options||[]).find(x=>x.id===optId);
+                                if(o){ unit += o.prix; optNames.push(o.nom); }
+                        });
+                        const lineTotal = unit*sel.qty;
+                    
+                        const imgBoxSize = 30;
+             const textX = MXmm + imgBoxSize + 8;
+                        const textW = usableWmm - imgBoxSize - 12;
+                        const descLines = wrapText(r.description||"", textW, fontReg, 7.8);
+      const encarts = (r.encarts||[]).slice(0,4);
+                    
+                        let estH = 6 + 4.5 + 5 + (descLines.length*3.6 + 1);
+                        if(encarts.length) estH += 7;
+                        if(optNames.length) estH += 4.5;
+                        estH += 9;
+              if(estH < imgBoxSize + 6) estH = imgBoxSize + 6;
+                        if(y + estH > PHmm - 20){ page = pdfDoc.addPage([PWmm*M, PHmm*M]); y = 16; }
+  
+      const cardTop = y;
+      if(r.image){
+        const imgBytes = await fetchImageBytes(r.image);
+            if(imgBytes) await imgMM(imgBytes, MXmm+3, cardTop+3, imgBoxSize, imgBoxSize);
       }
-      function setColor(c){ doc.setTextColor(c[0],c[1],c[2]); }
-      function setFill(c){ doc.setFillColor(c[0],c[1],c[2]); }
-      function setDraw(c){ doc.setDrawColor(c[0],c[1],c[2]); }
-    
-      const t = computeTotals();
-      const ent = DATA.entreprise;
-      const fin = DATA.financement;
-      const rib = ent.rib || {};
-      const dateStr = new Date().toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'});
-    
-      function drawHeader(){
-            if(XELER_LOGO_DATAURL){
-                    const logoH = 9, logoW = logoH * (360/106);
-                    try{ doc.addImage(XELER_LOGO_DATAURL, "JPEG", MX, y-2, logoW, logoH, undefined, "FAST"); }catch(e){}
-            } else {
-                    doc.setFont("helvetica","bold"); doc.setFontSize(16);
-                    setColor(PDF_COLORS.dark);
-                    doc.text("XELER", MX, y+5);
-                    const xelerW = doc.getTextWidth("XELER ");
-                    setColor(PDF_COLORS.accent);
-                    doc.text("ROBOTIQUE", MX + xelerW, y+5);
-            }
-        
-            doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
-            setColor(PDF_COLORS.textSoft);
-            doc.text(ent.adresse||"", PW-MX, y+1, {align:"right"});
-            doc.text(`${ent.tel||""} — ${ent.email||""}`, PW-MX, y+5, {align:"right"});
-        
-            y += 9;
-            setDraw(PDF_COLORS.accent); doc.setLineWidth(0.8);
-            doc.line(MX, y, PW-MX, y);
-            y += 8;
-      }
-    
-      drawHeader();
-    
-      doc.setFont("helvetica","bold"); doc.setFontSize(15);
-      setColor(PDF_COLORS.dark);
-      doc.text(`Devis ${currentDevisNum}`, MX, y);
+                    
+                        let ty = cardTop + 6;
+             txt((r.categorie||"").toUpperCase(), textX, ty, {size:6.8, font:fontBold, color:C.accent});
+                        ty += 4.5;
+                        txt(r.nom, textX, ty, {size:11, font:fontBold, color:C.dark});
+                        ty += 5;
+                        txtBlock(descLines, textX, ty, 3.6, {size:7.8, color:C.textSoft});
+      ty += descLines.length*3.6 + 1;
+                    
+                        if(encarts.length){
+                                const colW = textW/4;
+                                encarts.forEach((e,i)=>{
+                                          const ex = textX + i*colW;
+                                          txt((e.titre||"").toUpperCase(), ex, ty, {size:6, font:fontBold, color:C.accentDark});
+            txt(e.texte||"", ex, ty+3.2, {size:7, color:C.dark});
+                                });
+                                ty += 7;
+                        }
+                        if(optNames.length){
+        txt("+ "+optNames.join(", "), textX, ty, {size:7, font:fontItalic, color:C.textFaint});
+        ty += 4.5;
+                        }
+                    
+                        const minBottomForImage = cardTop + imgBoxSize + 6;
+                        let priceY = Math.max(ty + 5, minBottomForImage);
+                        lineMM(textX, priceY-4, MXmm+usableWmm-3, priceY-4, {color:C.border, width:0.2});
+          txt(`Qté ${sel.qty} × ${unit?fmt(unit):'—'}`, textX, priceY, {size:8, color:C.textSoft});
+                        txt(unit?fmt(lineTotal):'Prix à confirmer', MXmm+usableWmm-3, priceY, {size:9.5, font:fontBold, color:C.accent, align:"right"});
+  
+      const cardBottom = priceY + 3;
+      rectMM(MXmm, cardTop, usableWmm, cardBottom-cardTop, {stroke:C.border, strokeWidth:0.3});
+      y = cardBottom + 4;
+                  }
+                
+                  // ---- OPTIONS ----
+                  const consomEntries = Object.entries(devis.consommables).filter(([id])=>DATA.consommables.find(c=>c.id===id));
+                  if(consomEntries.length){
+                        if(ensureSpace(8 + consomEntries.length*6 + 4)) await drawHeader();
+                        txt("OPTIONS", MXmm, y, {size:9, font:fontBold, color:C.dark}); y += 5;
+                        rectMM(MXmm, y, usableWmm, 6, {fill:C.dark});
+                        txt("DÉSIGNATION", MXmm+3, y+4, {size:7, font:fontBold, color:C.white});
+      txt("QTÉ", MXmm+usableWmm-55, y+4, {size:7, font:fontBold, color:C.white});
+      txt("PRIX UNITAIRE", MXmm+usableWmm-38, y+4, {size:7, font:fontBold, color:C.white});
+                        txt("TOTAL", MXmm+usableWmm-3, y+4, {size:7, font:fontBold, color:C.white, align:"right"});
       y += 6;
-      doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
-      setColor(PDF_COLORS.textFaint);
-      doc.text(`Établi le ${dateStr} — Zone d'intervention : ${ent.zone||""}`, MX, y);
-      y += 7;
+      consomEntries.forEach(([id,qty],i)=>{
+        const c = DATA.consommables.find(x=>x.id===id);
+              if(i%2===1) rectMM(MXmm, y, usableWmm, 6, {fill:C.panelBg});
+              txt(c.nom, MXmm+3, y+4, {size:8, color:C.dark});
+              txt(String(qty), MXmm+usableWmm-55, y+4, {size:8, color:C.dark});
+              txt(fmt(c.prix), MXmm+usableWmm-38, y+4, {size:8, color:C.dark});
+        txt(fmt(c.prix*qty), MXmm+usableWmm-3, y+4, {size:8, color:C.dark, align:"right"});
+        y += 6;
+  });
+      y += 4;
+  }
+  
+    // ---- Totals ----
+    const hasMensualite = t.mensualiteTtc > 0;
+    const boxW = hasMensualite ? (usableWmm-6)/2 : usableWmm;
+    const comptantRows = [["Total HT", fmt(t.ht)]];
+    if(t.hasRemise) comptantRows.push(["Remise", "− "+fmt(t.remiseAmount)]);
+    comptantRows.push(["TVA (20%)", fmt(t.tva)]);
+    comptantRows.push(["Total TTC", fmt(t.ttc)]);
+                  const boxH = 8 + comptantRows.length*6.5;
+                  if(ensureSpace(boxH)) await drawHeader();
+                  const boxTop = y;
+                
+                  function totalsBox(x, w, title, rows, highlight){
+                        rectMM(x, boxTop, w, boxH, {fill: highlight?C.panelAccentBg:C.panelBg, stroke:C.border, strokeWidth:0.3});
+      const titleY = boxTop + 6;
+      txt(title, x+4, titleY, {size:8.5, font:fontBold, color:C.dark});
+      const rowsTop = titleY + 4;
+                        const rowsAvailH = (boxTop + boxH - 4) - rowsTop;
+      const rowH = rowsAvailH / rows.length;
+                        rows.forEach((row,i)=>{
+        const isLast = i===rows.length-1;
+                  const ry = rowsTop + rowH*i + rowH*0.72;
+                                const opts = {size: isLast?9.5:8, font: isLast?fontBold:fontReg, color: isLast?C.accent:C.textSoft};
+            txt(row[0], x+4, ry, opts);
+                                txt(row[1], x+w-4, ry, {...opts, align:"right"});
+});
+    }
     
-      // ---- Client box ----
-      const clientLine1 = `${devis.client.nom||'—'}${devis.client.societe? '  —  '+devis.client.societe : ''}`;
-      const clientLine2 = `${devis.client.email||''}${devis.client.tel? '  —  '+devis.client.tel : ''}`;
-      setFill(PDF_COLORS.panelBg);
-      doc.roundedRect(MX, y, usableW, 14, 2, 2, "F");
-      doc.setFont("helvetica","bold"); doc.setFontSize(9.5);
-      setColor(PDF_COLORS.dark);
-      doc.text("Client : " + clientLine1, MX+4, y+6);
-      doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
-      setColor(PDF_COLORS.textSoft);
-      if(clientLine2.trim()) doc.text(clientLine2, MX+4, y+11);
-      y += 20;
-    
-      // ---- Robot cards (contenu dessiné d'abord, bordure dessinée APRÈS sur la hauteur réelle) ----
-      for(const [id, sel] of Object.entries(devis.robots)){
-            const r = DATA.robots.find(x=>x.id===id); if(!r) continue;
-            let unit = r.prixAchat||0;
-            let optNames = [];
-            sel.options.forEach(optId=>{
-                    const o = (r.options||[]).find(x=>x.id===optId);
-                    if(o){ unit += o.prix; optNames.push(o.nom); }
-            });
-            const lineTotal = unit*sel.qty;
-        
-            const imgBoxSize = 30;
-            const textX0 = MX + imgBoxSize + 8;
-            const textW = usableW - imgBoxSize - 12;
-            const descLines = doc.splitTextToSize(r.description||"", textW);
-            const encarts = (r.encarts||[]).slice(0,4);
-        
-            // Hauteur réelle estimée AVANT dessin (mêmes increments que le rendu ci-dessous)
-            let estH = 6 + 4.5 + 5 + (descLines.length*3.6 + 1);
-            if(encarts.length) estH += 7;
-            if(optNames.length) estH += 4.5;
-            estH += 9; // marge + séparateur + ligne de prix
-            if(estH < imgBoxSize + 6) estH = imgBoxSize + 6;
-        
-            // Si la carte ne tient pas sur la page, on saute une page AVANT de commencer à dessiner
-            if(y + estH > PH - 20){ doc.addPage(); y = 16; }
-        
-            const cardTop = y;
-            const textX = textX0;
-        
-            // image
-            if(r.image){
-                    const dataUrl = await loadImageAsDataUrl(r.image);
-                    if(dataUrl){
-                              try{ doc.addImage(dataUrl, "JPEG", MX+3, cardTop+3, imgBoxSize, imgBoxSize, undefined, "FAST"); }catch(e){}
-                    }
-            }
-        
-            let ty = cardTop + 6;
-            doc.setFont("helvetica","bold"); doc.setFontSize(6.8);
-            setColor(PDF_COLORS.accent);
-            doc.text((r.categorie||"").toUpperCase(), textX, ty);
-            ty += 4.5;
-            doc.setFont("helvetica","bold"); doc.setFontSize(11);
-            setColor(PDF_COLORS.dark);
-            doc.text(r.nom, textX, ty);
-            ty += 5;
-            doc.setFont("helvetica","normal"); doc.setFontSize(7.8);
-            setColor(PDF_COLORS.textSoft);
-            doc.text(descLines, textX, ty);
-            ty += descLines.length*3.6 + 1;
-        
-            if(encarts.length){
-                    const colW = textW/4;
-                    encarts.forEach((e,i)=>{
-                              const ex = textX + i*colW;
-                              doc.setFont("helvetica","bold"); doc.setFontSize(6);
-                              setColor(PDF_COLORS.accentDark);
-                              doc.text((e.titre||"").toUpperCase(), ex, ty, {maxWidth: colW-2});
-                              doc.setFont("helvetica","normal"); doc.setFontSize(7);
-                              setColor(PDF_COLORS.dark);
-                              doc.text(e.texte||"", ex, ty+3.2, {maxWidth: colW-2});
-                    });
-                    ty += 7;
-            }
-            if(optNames.length){
-                    doc.setFont("helvetica","italic"); doc.setFontSize(7);
-                    setColor(PDF_COLORS.textFaint);
-                    doc.text("+ "+optNames.join(", "), textX, ty, {maxWidth: textW});
-                    ty += 4.5;
-            }
-        
-            // ligne de prix — positionnée juste après le contenu réel (jamais de chevauchement)
-            const minBottomForImage = cardTop + imgBoxSize + 6;
-            let priceY = Math.max(ty + 5, minBottomForImage);
-            setDraw(PDF_COLORS.border); doc.setLineWidth(0.2);
-            doc.line(textX, priceY-4, MX+usableW-3, priceY-4);
-            doc.setFont("helvetica","normal"); doc.setFontSize(8);
-            setColor(PDF_COLORS.textSoft);
-            doc.text(`Qté ${sel.qty} × ${unit?fmt(unit):'—'}`, textX, priceY);
-            doc.setFont("helvetica","bold"); doc.setFontSize(9.5);
-            setColor(PDF_COLORS.accent);
-            doc.text(unit?fmt(lineTotal):'Prix à confirmer', MX+usableW-3, priceY, {align:"right"});
-        
-            const cardBottom = priceY + 3;
-            const cardH = cardBottom - cardTop;
-        
-            // bordure dessinée en dernier (trait seul, ne recouvre pas le texte déjà tracé)
-            setDraw(PDF_COLORS.border); doc.setLineWidth(0.3);
-            doc.roundedRect(MX, cardTop, usableW, cardH, 2, 2, "S");
-        
-            y = cardBottom + 4;
-      }
-    
-      // ---- Consommables ----
-      const consomEntries = Object.entries(devis.consommables).filter(([id])=>DATA.consommables.find(c=>c.id===id));
-      if(consomEntries.length){
-            if(ensureSpace(8 + consomEntries.length*6 + 4)) drawHeader();
-            doc.setFont("helvetica","bold"); doc.setFontSize(9);
-            setColor(PDF_COLORS.dark);
-            doc.text("Consommables", MX, y); y += 5;
-            setFill(PDF_COLORS.dark);
-            doc.rect(MX, y, usableW, 6, "F");
-            doc.setFont("helvetica","bold"); doc.setFontSize(7);
-            setColor([255,255,255]);
-            doc.text("DÉSIGNATION", MX+3, y+4);
-            doc.text("QTÉ", MX+usableW-55, y+4);
-            doc.text("PRIX UNITAIRE", MX+usableW-38, y+4);
-            doc.text("TOTAL", MX+usableW-3, y+4, {align:"right"});
-            y += 6;
-            consomEntries.forEach(([id,qty],i)=>{
-                    const c = DATA.consommables.find(x=>x.id===id);
-                    if(i%2===1){ setFill(PDF_COLORS.panelBg); doc.rect(MX, y, usableW, 6, "F"); }
-                    doc.setFont("helvetica","normal"); doc.setFontSize(8);
-                    setColor(PDF_COLORS.dark);
-                    doc.text(c.nom, MX+3, y+4);
-                    doc.text(String(qty), MX+usableW-55, y+4);
-                    doc.text(fmt(c.prix), MX+usableW-38, y+4);
-                    doc.text(fmt(c.prix*qty), MX+usableW-3, y+4, {align:"right"});
-                    y += 6;
-            });
-            y += 4;
-      }
-    
-      // ---- Totals (lignes réparties de façon égale : les deux blocs restent alignés quel que soit le nombre de lignes) ----
-      const hasMensualite = t.mensualiteTtc > 0;
-      const boxW = hasMensualite ? (usableW-6)/2 : usableW;
-      const boxH = 34;
-      if(ensureSpace(boxH)) drawHeader();
-      const boxTop = y;
-    
-      function totalsBox(x, w, title, rows, highlight){
-            setDraw(PDF_COLORS.border); doc.setLineWidth(0.3);
-            setFill(highlight ? [255,243,240] : PDF_COLORS.panelBg);
-            doc.roundedRect(x, boxTop, w, boxH, 2, 2, "F");
-            const titleY = boxTop + 6;
-            doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
-            setColor(PDF_COLORS.dark);
-            doc.text(title, x+4, titleY, {maxWidth: w-8});
-            const rowsTop = titleY + 4;
-            const rowsAvailH = (boxTop + boxH - 4) - rowsTop;
-            const rowH = rowsAvailH / rows.length;
-            rows.forEach((row,i)=>{
-                    const isLast = i===rows.length-1;
-                    const ry = rowsTop + rowH*i + rowH*0.72;
-                    doc.setFont("helvetica", isLast?"bold":"normal");
-                    doc.setFontSize(isLast?9.5:8);
-                    setColor(isLast? PDF_COLORS.accent : PDF_COLORS.textSoft);
-                    doc.text(row[0], x+4, ry);
-                    doc.text(row[1], x+w-4, ry, {align:"right"});
-            });
-      }
-    
-      totalsBox(MX, boxW, "Comptant", [
-            ["Total HT", fmt(t.ht)],
-            ["Remise", "− "+fmt(t.remiseAmount)],
-            ["TVA (20%)", fmt(t.tva)],
-            ["Total TTC", fmt(t.ttc)]
-          ], false);
-    
-      if(hasMensualite){
-            totalsBox(MX+boxW+6, boxW, `Location ${fin.financeur} — ${fin.duree} mois`, [
-                    ["Mensualité HT", fmt(t.mensualiteHT)],
-                    ["TVA (20%)", fmt(t.mensualiteTva)],
-                    ["Mensualité TTC", fmt(t.mensualiteTtc)+"/mois"]
-                  ], true);
-      }
-      y = boxTop + boxH + 4;
-    
-      if(hasMensualite && fin.mention){
-            doc.setFont("helvetica","normal"); doc.setFontSize(6.3);
-            setColor(PDF_COLORS.textFaint);
-            const mentionLines = doc.splitTextToSize(fin.mention, usableW);
-            doc.text(mentionLines, MX, y);
-            y += mentionLines.length*3 + 3;
-      }
-    
-      // ---- Modalités de paiement + RIB ----
-      const payBoxH = 26;
-      if(ensureSpace(payBoxH)) drawHeader();
-      const payTop = y;
-      const payBoxW = (usableW-6)/2;
-    
-      setDraw(PDF_COLORS.border); doc.setLineWidth(0.3);
-      setFill(PDF_COLORS.panelBg);
-      doc.roundedRect(MX, payTop, payBoxW, payBoxH, 2, 2, "F");
-      doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
-      setColor(PDF_COLORS.dark);
-      doc.text("Modalités de paiement", MX+4, payTop+6);
-      doc.setFont("helvetica","normal"); doc.setFontSize(7.5);
-      setColor(PDF_COLORS.textSoft);
-      const condLines = doc.splitTextToSize(ent.conditionsPaiement || "Acompte de 50% à la commande, solde à la livraison.", payBoxW-8);
-      doc.text(condLines, MX+4, payTop+11);
-    
-      const ribX = MX+payBoxW+6;
-      setFill(PDF_COLORS.panelBg);
-      doc.roundedRect(ribX, payTop, payBoxW, payBoxH, 2, 2, "F");
-      doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
-      setColor(PDF_COLORS.dark);
-      doc.text("Coordonnées bancaires", ribX+4, payTop+6);
-      doc.setFont("helvetica","normal"); doc.setFontSize(7.3);
-      setColor(PDF_COLORS.textSoft);
-      doc.text(`Titulaire : ${rib.titulaire||""}`, ribX+4, payTop+10.5);
-      doc.text(`IBAN : ${rib.iban||""}`, ribX+4, payTop+14.5);
-      doc.text(`BIC : ${rib.bic||""}   —   ${rib.banque||""}`, ribX+4, payTop+18.5);
-    
-      y = payTop + payBoxH + 6;
-    
-      // ---- Bloc signature ----
-      const sigBoxH = 30;
-      if(ensureSpace(sigBoxH)) drawHeader();
-      const sigTop = y;
-      const sigBoxW = (usableW-6)/2;
-    
-      function signatureBox(x, label){
-            setDraw(PDF_COLORS.border); doc.setLineWidth(0.3);
-            doc.roundedRect(x, sigTop, sigBoxW, sigBoxH, 2, 2, "S");
-            doc.setFont("helvetica","bold"); doc.setFontSize(8);
-            setColor(PDF_COLORS.dark);
-            doc.text(label, x+4, sigTop+6);
-            doc.setFont("helvetica","normal"); doc.setFontSize(7.3);
-            setColor(PDF_COLORS.textFaint);
-            doc.text("Date :", x+4, sigTop+13);
-            doc.text("Signature et cachet :", x+4, sigTop+19);
-      }
-      signatureBox(MX, "Bon pour accord — Xeler Robotique");
-      signatureBox(MX+sigBoxW+6, "Bon pour accord — Client");
-      y = sigTop + sigBoxH + 5;
-    
-      // ---- Footer ----
-      if(ensureSpace(10)) drawHeader();
-      setDraw(PDF_COLORS.border); doc.setLineWidth(0.2);
-      doc.line(MX, y, PW-MX, y); y += 4;
-      doc.setFont("helvetica","normal"); doc.setFontSize(7);
-      setColor(PDF_COLORS.textFaint);
-      doc.text(ent.mentions||"", MX, y, {maxWidth: usableW*0.7});
-      doc.text(ent.nom||"", PW-MX, y, {align:"right"});
-    
-      return doc.output("arraybuffer");
+    totalsBox(MXmm, boxW, "Comptant", comptantRows, false);
+    if(hasMensualite){
+      totalsBox(MXmm+boxW+6, boxW, `Location ${fin.financeur} — ${fin.duree} mois`, [
+        ["Mensualité HT", fmt(t.mensualiteHT)],
+              ["TVA (20%)", fmt(t.mensualiteTva)],
+              ["Mensualité TTC", fmt(t.mensualiteTtc)+"/mois"]
+            ], true);
+    }
+                  y = boxTop + boxH + 4;
+  
+    if(hasMensualite && fin.mention){
+      const mentionLines = wrapText(fin.mention, usableWmm, fontReg, 6.3);
+          txtBlock(mentionLines, MXmm, y, 3, {size:6.3, color:C.textFaint});
+          y += mentionLines.length*3 + 3;
+    }
+                
+                  // ---- Contrat de maintenance (si inclus) ----
+                  if(devis.maintenance){
+                        const descLines = wrapText(maint.description||"", usableWmm-8, fontReg, 7.5);
+                        const maintBoxH = 14 + descLines.length*3.6;
+                        if(ensureSpace(maintBoxH)) await drawHeader();
+                        const mTop = y;
+        rectMM(MXmm, mTop, usableWmm, maintBoxH, {fill:C.panelBg, stroke:C.border, strokeWidth:0.3});
+      txt(`Contrat de maintenance — ${fmt(maint.prix||0)} HT/mois`, MXmm+4, mTop+6, {size:8.5, font:fontBold, color:C.dark});
+      txtBlock(descLines, MXmm+4, mTop+10.5, 3.6, {size:7.5, color:C.textSoft});
+                        const ckY = mTop + maintBoxH - 4;
+      checkbox(MXmm+4, ckY, 3.2, "J'accepte le contrat de maintenance", {size:7.3});
+                        checkbox(MXmm+usableWmm/2+4, ckY, 3.2, "Je refuse le contrat de maintenance", {size:7.3});
+                        y = mTop + maintBoxH + 5;
+                  }
+                
+                  // ---- Modalités de paiement + RIB ----
+                  const payBoxH = 26;
+                  if(ensureSpace(payBoxH)) await drawHeader();
+                  const payTop = y;
+                  const payBoxW = (usableWmm-6)/2;
+                
+                  rectMM(MXmm, payTop, payBoxW, payBoxH, {fill:C.panelBg, stroke:C.border, strokeWidth:0.3});
+                  txt("Modalités de paiement", MXmm+4, payTop+6, {size:8.5, font:fontBold, color:C.dark});
+                  const condLines = wrapText(ent.conditionsPaiement || "Acompte de 50% à la commande, solde à la livraison.", payBoxW-8, fontReg, 7.5);
+                  txtBlock(condLines, MXmm+4, payTop+11, 3.6, {size:7.5, color:C.textSoft});
+                
+                  const ribX = MXmm+payBoxW+6;
+                  rectMM(ribX, payTop, payBoxW, payBoxH, {fill:C.panelBg, stroke:C.border, strokeWidth:0.3});
+                  txt("Coordonnées bancaires", ribX+4, payTop+6, {size:8.5, font:fontBold, color:C.dark});
+    txt(`Titulaire : ${rib.titulaire||""}`, ribX+4, payTop+10.5, {size:7.3, color:C.textSoft});
+                  txt(`IBAN : ${rib.iban||""}`, ribX+4, payTop+14.5, {size:7.3, color:C.textSoft});
+                  txt(`BIC : ${rib.bic||""}   —   ${rib.banque||""}`, ribX+4, payTop+18.5, {size:7.3, color:C.textSoft});
+                
+                  y = payTop + payBoxH + 6;
+                
+                  // ---- Bon pour accord (client uniquement) ----
+                  const sigBoxH = 26;
+    if(ensureSpace(sigBoxH)) await drawHeader();
+                  const sigTop = y;
+    rectMM(MXmm, sigTop, usableWmm, sigBoxH, {stroke:C.border, strokeWidth:0.3});
+                  txt("Bon pour accord — Client", MXmm+4, sigTop+6, {size:8, font:fontBold, color:C.dark});
+                  txt("Date :", MXmm+4, sigTop+13, {size:7.3, color:C.textFaint});
+                  txt("Signature et cachet :", MXmm+4, sigTop+19, {size:7.3, color:C.textFaint});
+    y = sigTop + sigBoxH + 5;
+  
+    // ---- Footer ----
+    if(ensureSpace(10)) await drawHeader();
+    lineMM(MXmm, y, PWmm-MXmm, y, {color:C.border, width:0.2}); y += 4;
+    txt(ent.mentions||"", MXmm, y, {size:7, color:C.textFaint});
+    txt(ent.nom||"", PWmm-MXmm, y, {size:7, color:C.textFaint, align:"right"});
+  
+    return await pdfDoc.save();
   }
   
   async function buildMergedPdf(){
-      const devisBytes = await getDevisPdfBytes();
-      const { PDFDocument } = PDFLib;
-      const merged = await PDFDocument.load(devisBytes);
+    const devisBytes = await getDevisPdfBytes();
+    const { PDFDocument } = PDFLib;
+    const merged = await PDFDocument.load(devisBytes);
     
       // Collect unique fiche PDFs for every robot in the current devis, in selection order
-      const fichePaths = [];
-      Object.keys(devis.robots).forEach(id=>{
-            const r = DATA.robots.find(x=>x.id===id);
-            if(r && r.fiche && !fichePaths.includes(r.fiche)) fichePaths.push(r.fiche);
-      });
-    
-      let attachedCount = 0, failedCount = 0;
-      for(const path of fichePaths){
-            try{
-                    const res = await fetch(path);
-                    if(!res.ok) throw new Error("fetch failed");
-                    const bytes = await res.arrayBuffer();
-                    const ficheDoc = await PDFDocument.load(bytes);
-                    const pages = await merged.copyPages(ficheDoc, ficheDoc.getPageIndices());
-                    pages.forEach(p=>merged.addPage(p));
-                    attachedCount++;
-            }catch(e){
-                    console.warn("Impossible de joindre la fiche:", path, e);
-                    failedCount++;
-            }
-      }
+    const fichePaths = [];
+    Object.keys(devis.robots).forEach(id=>{
+          const r = DATA.robots.find(x=>x.id===id);
+      if(r && r.fiche && !fichePaths.includes(r.fiche)) fichePaths.push(r.fiche);
+    });
+  
+    let attachedCount = 0, failedCount = 0;
+    for(const path of fichePaths){
+          try{
+                  const res = await fetch(path);
+        if(!res.ok) throw new Error("fetch failed");
+          const bytes = await res.arrayBuffer();
+                  const ficheDoc = await PDFDocument.load(bytes);
+        const pages = await merged.copyPages(ficheDoc, ficheDoc.getPageIndices());
+                                             pages.forEach(p=>merged.addPage(p));
+        attachedCount++;
+          }catch(e){
+                  console.warn("Impossible de joindre la fiche:", path, e);
+                  failedCount++;
+          }
+    }
       const finalBytes = await merged.save();
       return { finalBytes, attachedCount, failedCount };
   }
-  
-  async function downloadPdf(){
-      try{
-            toast("Génération du PDF...");
-            const { finalBytes, attachedCount, failedCount } = await buildMergedPdf();
-            const blob = new Blob([finalBytes], {type:"application/pdf"});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url; a.download = `Devis_${currentDevisNum}.pdf`;
-            a.click();
-            URL.revokeObjectURL(url);
-            if(attachedCount>0) toast(`PDF téléchargé avec ${attachedCount} fiche(s) technique(s) jointe(s).`);
-            else if(failedCount>0) toast("PDF téléchargé — certaines fiches n'ont pas pu être jointes (app non hébergée en ligne ?).");
-            else toast("PDF téléchargé.");
-            return blob;
-      }catch(e){
-            console.error(e);
-            toast("Erreur lors de la génération du PDF : " + (e && e.message ? e.message : e));
-            return null;
-      }
-  }
-  
-  // Envoi : sur mobile (et certains navigateurs desktop compatibles), utilise le partage natif
-  // pour joindre directement le PDF dans Outlook/Mail — pas de manipulation de fichier requise.
-  // Sinon, repli sur le téléchargement + ouverture d'un brouillon mailto.
-  async function openSendModal(){
-      const ent = DATA.entreprise, mail = DATA.mail;
-      if(!devis.client.email){ toast("Renseignez l'email du client avant l'envoi."); return; }
-    
+              
+              async function downloadPdf(){
+    try{
       toast("Génération du PDF...");
-      let finalBytes, attachedCount = 0;
-      try{
-            const result = await buildMergedPdf();
-            finalBytes = result.finalBytes;
-            attachedCount = result.attachedCount;
-      }catch(e){
-            console.error(e);
-            toast("Erreur lors de la génération du PDF : " + (e && e.message ? e.message : e));
-            return;
-      }
-    
-      const subject = (mail.objet||"Votre devis Xeler Robotique — {NUM_DEVIS}").replace("{NUM_DEVIS}", currentDevisNum);
-      const body = (mail.message||"").replace("{CLIENT}", devis.client.nom||"").replace("{NUM_DEVIS}", currentDevisNum);
-      const fileName = `Devis_${currentDevisNum}.pdf`;
-      const file = new File([finalBytes], fileName, {type:"application/pdf"});
-    
-      if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
-            try{
-                    await navigator.share({files:[file], title: subject, text: body});
-                    toast("Partage ouvert — choisissez Outlook ou Mail pour joindre le PDF automatiquement.");
-                    return;
-            }catch(e){
-                    // L'utilisateur a annulé le partage, ou l'API a échoué : on continue sur le repli ci-dessous
-                    if(e && e.name === "AbortError") return;
-            }
-      }
-    
-      // Repli desktop : téléchargement + brouillon mailto (pièce jointe à glisser manuellement)
-      const blob = new Blob([finalBytes], {type:"application/pdf"});
+      const { finalBytes, attachedCount, failedCount } = await buildMergedPdf();
+          const blob = new Blob([finalBytes], {type:"application/pdf"});
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = fileName;
+          const a = document.createElement("a");
+      a.href = url; a.download = `Devis_${currentDevisNum}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-      if(attachedCount>0) toast(`PDF téléchargé avec ${attachedCount} fiche(s) jointe(s) — ouverture de votre messagerie...`);
-      else toast("PDF téléchargé — ouverture de votre messagerie...");
-      const mailto = `mailto:${devis.client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\n(Pensez à joindre le PDF téléchargé : "+fileName+")")}`;
-                            setTimeout(()=>{ window.location.href = mailto; }, 900);
+      if(attachedCount>0) toast(`PDF téléchargé avec ${attachedCount} fiche(s) technique(s) jointe(s).`);
+      else if(failedCount>0) toast("PDF téléchargé — certaines fiches n'ont pas pu être jointes (app non hébergée en ligne ?).");
+      else toast("PDF téléchargé.");
+          return blob;
+    }catch(e){
+      console.error(e);
+      toast("Erreur lors de la génération du PDF : " + (e && e.message ? e.message : e));
+      return null;
+    }
+              }
+              
+              // Envoi : sur mobile (et certains navigateurs desktop compatibles), utilise le partage natif
+              // pour joindre directement le PDF dans Outlook/Mail — pas de manipulation de fichier requise.
+  // Sinon, repli sur le téléchargement + ouverture d'un brouillon mailto.
+              async function openSendModal(){
+    const ent = DATA.entreprise, mail = DATA.mail;
+    if(!devis.client.email){ toast("Renseignez l'email du client avant l'envoi."); return; }
+                
+                  toast("Génération du PDF...");
+                  let finalBytes, attachedCount = 0;
+    try{
+      const result = await buildMergedPdf();
+      finalBytes = result.finalBytes;
+      attachedCount = result.attachedCount;
+    }catch(e){
+          console.error(e);
+          toast("Erreur lors de la génération du PDF : " + (e && e.message ? e.message : e));
+      return;
+  }
+        
+    const subject = (mail.objet||"Votre devis Xeler Robotique — {NUM_DEVIS}").replace("{NUM_DEVIS}", currentDevisNum);
+                  const body = (mail.message||"").replace("{CLIENT}", devis.client.nom||"").replace("{NUM_DEVIS}", currentDevisNum);
+    const fileName = `Devis_${currentDevisNum}.pdf`;
+                  const file = new File([finalBytes], fileName, {type:"application/pdf"});
+                
+                  if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+                        try{
+                                await navigator.share({files:[file], title: subject, text: body});
+        toast("Partage ouvert — choisissez Outlook ou Mail pour joindre le PDF automatiquement.");
+        return;
+                        }catch(e){
+                                // L'utilisateur a annulé le partage, ou l'API a échoué : on continue sur le repli ci-dessous
+        if(e && e.name === "AbortError") return;
+  }
+  }
+  
+    // Repli desktop : téléchargement + brouillon mailto (pièce jointe à glisser manuellement)
+                  const blob = new Blob([finalBytes], {type:"application/pdf"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+                  a.href = url; a.download = fileName;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  if(attachedCount>0) toast(`PDF téléchargé avec ${attachedCount} fiche(s) jointe(s) — ouverture de votre messagerie...`);
+    else toast("PDF téléchargé — ouverture de votre messagerie...");
+    const mailto = `mailto:${devis.client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\n(Pensez à joindre le PDF téléchargé : "+fileName+")")}`;
+    setTimeout(()=>{ window.location.href = mailto; }, 900);
   }
   function renderCatalogue(){
   const grid = document.getElementById("catalogue-grid");
