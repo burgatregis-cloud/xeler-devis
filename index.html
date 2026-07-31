@@ -831,7 +831,8 @@ function toast(msg){
 }
 
 function fmt(n){
-  return (Math.round(n*100)/100).toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + " €";
+    return (Math.round(n*100)/100).toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}).replace(/[\u202f\u00a0]/g,' ') + " €";
+  
 }
 
 /* ================================================================
@@ -1180,26 +1181,41 @@ const XELER_LOGO_DATAURL = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2
                   function mmX(xmm){ return xmm*M; }
                   function mmY(ymm){ return (PHmm-ymm)*M; }
                 
+                  function sanitizePdfText(s){
+                        return s
+                          .replace(/[\u202f\u00a0]/g, " ")
+                          .replace(/[\u2032]/g, "'")
+                          .replace(/[\u2033]/g, '"')
+                          .replace(/[\u2018\u2019]/g, "'")
+                          .replace(/[\u201c\u201d]/g, '"');
+                  }
                   function txt(str, xmm, ymm, {size=8, font=fontReg, color=C.dark, align="left"}={}){
-                        str = str==null ? "" : String(str);
+                        str = str==null ? "" : sanitizePdfText(String(str));
                         if(!str) return;
                         let xpt = mmX(xmm);
-                        const w = font.widthOfTextAtSize(str, size);
+                        let w;
+                        try{ w = font.widthOfTextAtSize(str, size); }catch(e){ return; }
                         if(align==="right") xpt -= w;
                         else if(align==="center") xpt -= w/2;
                         try{ page.drawText(str, {x:xpt, y:mmY(ymm), size, font, color}); }catch(e){}
-  }
+                  }
+                  
+                  }
         function wrapText(str, maxWmm, font, size){
               const maxWpt = maxWmm*M;
-              const words = (str||"").split(/\s+/).filter(Boolean);
+              const words = sanitizePdfText(str||"").split(/\s+/).filter(Boolean);
               const lines = []; let cur = "";
               words.forEach(w=>{
                       const test = cur? cur+" "+w : w;
-                      if(font.widthOfTextAtSize(test, size) > maxWpt && cur){ lines.push(cur); cur = w; }
-        else cur = test;
-  });
+                      let width;
+                      try{ width = font.widthOfTextAtSize(test, size); }catch(e){ width = 0; }
+                      if(width > maxWpt && cur){ lines.push(cur); cur = w; }
+                      else cur = test;
+              });
               if(cur) lines.push(cur);
               return lines.length ? lines : [""];
+        }
+    
         }
                   function txtBlock(lines, xmm, ymm, lineHmm, opts){
                         lines.forEach((l,i)=> txt(l, xmm, ymm + i*lineHmm, opts));
