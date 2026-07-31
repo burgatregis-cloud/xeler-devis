@@ -1200,8 +1200,7 @@ const XELER_LOGO_DATAURL = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2
                         try{ page.drawText(str, {x:xpt, y:mmY(ymm), size, font, color}); }catch(e){}
                   }
                   
-                  }
-        function wrapText(str, maxWmm, font, size){
+                  function wrapText(str, maxWmm, font, size){
               const maxWpt = maxWmm*M;
               const words = sanitizePdfText(str||"").split(/\s+/).filter(Boolean);
               const lines = []; let cur = "";
@@ -1216,8 +1215,7 @@ const XELER_LOGO_DATAURL = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2
               return lines.length ? lines : [""];
         }
     
-        }
-                  function txtBlock(lines, xmm, ymm, lineHmm, opts){
+        function txtBlock(lines, xmm, ymm, lineHmm, opts){
                         lines.forEach((l,i)=> txt(l, xmm, ymm + i*lineHmm, opts));
                   }
                   function rectMM(xmm, ymm, wmm, hmm, {fill=null, stroke=null, strokeWidth=0.3}={}){
