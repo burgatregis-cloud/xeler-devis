@@ -170,6 +170,8 @@ input[type=text], input[type=number], input[type=email], input[type=password], i
   color:#fff; padding:9px 12px; border-radius:9px; font-size:0.86rem; outline:none;
   transition:border-color .15s;
 }
+select{ color-scheme: dark; }
+select option{ background:#151c2c; color:#fff; }
 input:focus, select:focus, textarea:focus{border-color:var(--accent);}
 label{font-size:0.75rem; color:var(--text-faint); font-weight:600; display:block; margin-bottom:5px; text-transform:uppercase; letter-spacing:0.02em;}
 .field{margin-bottom:13px;}
@@ -375,11 +377,11 @@ hr.sep{border:none; border-top:1px solid var(--card-border); margin:18px 0;}
           <div id="selected-robots-panel" style="margin-top:22px;"></div>
 
           <div style="margin-top:22px;">
-            <h3 style="font-family:var(--font-display); font-size:1.05rem; margin-bottom:12px;">Consommables</h3>
+            <h3 style="font-family:var(--font-display); font-size:1.05rem; margin-bottom:12px;">OPTIONS</h3>
             <div class="card">
               <div class="field-row" style="align-items:end;">
                 <div class="field" style="margin-bottom:0;">
-                  <label>Ajouter un consommable</label>
+                  <label>Ajouter une option</label>
                   <select id="consum-select"></select>
                 </div>
                 <div class="field" style="margin-bottom:0;">
@@ -387,6 +389,17 @@ hr.sep{border:none; border-top:1px solid var(--card-border); margin:18px 0;}
                 </div>
               </div>
               <div id="consum-list" style="margin-top:10px;"></div>
+            </div>
+          </div>
+
+          <div style="margin-top:22px;">
+            <h3 style="font-family:var(--font-display); font-size:1.05rem; margin-bottom:12px;">Contrat de maintenance</h3>
+            <div class="card">
+              <label style="display:flex; align-items:center; gap:10px; text-transform:none; font-size:0.9rem; color:#fff; font-weight:500;">
+                <input type="checkbox" id="maintenance-toggle" style="width:auto;" onchange="devis.maintenance=this.checked; renderAll();">
+                <span id="maintenance-label">Inclure le contrat de maintenance</span>
+              </label>
+              <div id="maintenance-desc" style="font-size:0.78rem; color:var(--text-faint); margin-top:6px;"></div>
             </div>
           </div>
         </div>
@@ -473,7 +486,8 @@ hr.sep{border:none; border-top:1px solid var(--card-border); margin:18px 0;}
 
       <div class="tabs">
         <button class="tab-btn active" data-tab="robots" onclick="switchAdminTab('robots')">Robots</button>
-        <button class="tab-btn" data-tab="consommables" onclick="switchAdminTab('consommables')">Consommables</button>
+        <button class="tab-btn" data-tab="consommables" onclick="switchAdminTab('consommables')">Options</button>
+        <button class="tab-btn" data-tab="maintenance" onclick="switchAdminTab('maintenance')">Maintenance</button>
         <button class="tab-btn" data-tab="financement" onclick="switchAdminTab('financement')">Financement</button>
         <button class="tab-btn" data-tab="entreprise" onclick="switchAdminTab('entreprise')">Entreprise</button>
         <button class="tab-btn" data-tab="mail" onclick="switchAdminTab('mail')">Envoi email</button>
@@ -486,8 +500,18 @@ hr.sep{border:none; border-top:1px solid var(--card-border); margin:18px 0;}
       </div>
 
       <div class="admin-tab" id="admin-consommables" style="display:none;">
-        <button class="btn btn-primary btn-sm" style="margin-bottom:14px;" onclick="openConsumModal(null)">+ Nouveau consommable</button>
+        <div class="banner-note">Une option sans modèle coché est proposée pour tous les robots. Si vous cochez un ou plusieurs modèles, elle n'apparaîtra dans le configurateur que lorsqu'un de ces robots est sélectionné.</div>
+        <button class="btn btn-primary btn-sm" style="margin-bottom:14px;" onclick="openConsumModal(null)">+ Nouvelle option</button>
         <div id="admin-consum-list"></div>
+      </div>
+
+      <div class="admin-tab" id="admin-maintenance" style="display:none;">
+        <div class="banner-note">Le contrat de maintenance peut être coché par le client sur chaque devis. Ce module est une première version — nous l'enrichirons ensemble par la suite.</div>
+        <div class="card" style="max-width:480px;">
+          <div class="field"><label>Prix mensuel HT (€)</label><input type="number" id="maint-prix"></div>
+          <div class="field"><label>Description (affichée sur le devis)</label><textarea id="maint-desc" rows="2"></textarea></div>
+          <button class="btn btn-primary btn-sm" onclick="saveMaintenance()">Enregistrer</button>
+        </div>
       </div>
 
       <div class="admin-tab" id="admin-financement" style="display:none;">
@@ -761,11 +785,15 @@ const DEFAULT_DATA = {
     }
   ],
   consommables: [
-    {id:"c-brosse", nom:"Brosse de rechange", prix:65, unite:"unité"},
-    {id:"c-batterie", nom:"Batterie additionnelle", prix:420, unite:"unité"},
-    {id:"c-filtre", nom:"Filtre HEPA", prix:38, unite:"unité"},
-    {id:"c-plateau", nom:"Plateau de service", prix:55, unite:"unité"}
-  ]
+    {id:"c-brosse", nom:"Brosse de rechange", prix:65, unite:"unité", modeles:[]},
+    {id:"c-batterie", nom:"Batterie additionnelle", prix:420, unite:"unité", modeles:[]},
+    {id:"c-filtre", nom:"Filtre HEPA", prix:38, unite:"unité", modeles:[]},
+    {id:"c-plateau", nom:"Plateau de service", prix:55, unite:"unité", modeles:[]}
+  ],
+  maintenance: {
+    prix: 99,
+    description: "Maintenance, déplacement et pièces inclus (consommables en supplément)."
+  }
 };
 
 /* ================================================================
@@ -782,6 +810,8 @@ function loadData(){
   if(!data.financement) data.financement = JSON.parse(JSON.stringify(DEFAULT_DATA.financement));
     if(data.entreprise && !data.entreprise.rib) data.entreprise.rib = JSON.parse(JSON.stringify(DEFAULT_DATA.entreprise.rib));
     if(data.entreprise && data.entreprise.conditionsPaiement===undefined) data.entreprise.conditionsPaiement = DEFAULT_DATA.entreprise.conditionsPaiement;
+  if(!data.maintenance) data.maintenance = JSON.parse(JSON.stringify(DEFAULT_DATA.maintenance));
+  (data.consommables||[]).forEach(c=>{ if(c.modeles===undefined) c.modeles = []; });
   (data.robots||[]).forEach(r=>{ if(r.prixLocation!==undefined) delete r.prixLocation; });
   return data;
 }
@@ -795,7 +825,8 @@ let devis = {
   client: {nom:"", societe:"", email:"", tel:""},
   robots: {}, // id -> {qty, options:[ids]}
   consommables: {}, // id -> qty
-  remise: {val:0, type:"pct"}
+  remise: {val:0, type:"pct"},
+  maintenance: false
 };
 
 /* ================================================================
@@ -913,9 +944,20 @@ function toggleOption(robotId, optId){
   renderAll();
 }
 
+function compatibleConsumables(){
+  const selectedIds = Object.keys(devis.robots);
+  return DATA.consommables.filter(c=>{
+    if(!c.modeles || c.modeles.length===0) return true;
+    if(selectedIds.length===0) return true;
+    return c.modeles.some(m=>selectedIds.includes(m));
+  });
+}
 function renderConsumSelect(){
   const sel = document.getElementById("consum-select");
-  sel.innerHTML = DATA.consommables.map(c=>`<option value="${c.id}">${c.nom} — ${fmt(c.prix)}</option>`).join("");
+  const list = compatibleConsumables();
+  sel.innerHTML = list.length
+    ? list.map(c=>`<option value="${c.id}">${c.nom} — ${fmt(c.prix)}</option>`).join("")
+    : `<option value="">Aucune option compatible</option>`;
 }
 function addConsumable(){
   const id = document.getElementById("consum-select").value;
@@ -926,7 +968,7 @@ function addConsumable(){
 function renderConsumList(){
   const wrap = document.getElementById("consum-list");
   const ids = Object.keys(devis.consommables);
-  if(ids.length===0){ wrap.innerHTML = `<div style="color:var(--text-faint); font-size:0.82rem;">Aucun consommable ajouté.</div>`; return; }
+  if(ids.length===0){ wrap.innerHTML = `<div style="color:var(--text-faint); font-size:0.82rem;">Aucune option ajoutée.</div>`; return; }
   wrap.innerHTML = ids.map(id=>{
     const c = DATA.consommables.find(x=>x.id===id);
     if(!c) return "";
@@ -950,6 +992,16 @@ function changeConsumQty(id, delta){
   renderAll();
 }
 function removeConsum(id){ delete devis.consommables[id]; renderAll(); }
+
+function renderMaintenanceBlock(){
+  const m = DATA.maintenance;
+  const label = document.getElementById("maintenance-label");
+  const desc = document.getElementById("maintenance-desc");
+  if(label) label.textContent = `Inclure le contrat de maintenance — ${fmt(m.prix)}/mois HT`;
+  if(desc) desc.textContent = m.description || "";
+  const ck = document.getElementById("maintenance-toggle");
+  if(ck) ck.checked = !!devis.maintenance;
+}
 
 function computeTotals(){
   let ht = 0;
@@ -987,30 +1039,36 @@ function renderSummary(){
   const fin = DATA.financement;
   wrap.innerHTML = `
     <div class="sum-line"><span>Total HT</span><span>${fmt(t.ht)}</span></div>
-    <div class="sum-line"><span>Remise</span><span>− ${fmt(t.remiseAmount)}</span></div>
+    ${t.hasRemise? `<div class="sum-line"><span>Remise</span><span>− ${fmt(t.remiseAmount)}</span></div>` : ''}
     <div class="sum-line"><span>TVA (20%)</span><span>${fmt(t.tva)}</span></div>
     <div class="sum-line total"><span>Comptant TTC</span><span class="val">${fmt(t.ttc)}</span></div>
     <div class="sum-line total" style="font-size:1rem;"><span>ou ${fin.financeur} ${fin.duree} mois TTC</span><span class="val">${fmt(t.mensualiteTtc)}/mois</span></div>
+    ${devis.maintenance? `<div class="sum-line" style="font-size:0.8rem;"><span>+ Maintenance</span><span>${fmt(t.maintenanceTtc)}/mois</span></div>` : ''}
   `;
 }
 
 function renderAll(){
   renderRobotGrid();
   renderSelectedRobots();
+  renderConsumSelect();
   renderConsumList();
+  renderMaintenanceBlock();
   renderSummary();
 }
+
 
 document.getElementById("remise-val").addEventListener("input", renderSummary);
 document.getElementById("remise-type").addEventListener("change", renderSummary);
 
 function resetDevis(){
-  devis = {client:{nom:"",societe:"",email:"",tel:""}, robots:{}, consommables:{}, remise:{val:0,type:"pct"}};
+  devis = {client:{nom:"",societe:"",email:"",tel:""}, robots:{}, consommables:{}, remise:{val:0,type:"pct"}, maintenance:false};
   document.getElementById("cl-nom").value="";
   document.getElementById("cl-societe").value="";
   document.getElementById("cl-email").value="";
   document.getElementById("cl-tel").value="";
   document.getElementById("remise-val").value=0;
+  const mCk = document.getElementById("maintenance-toggle");
+  if(mCk) mCk.checked = false;
   renderAll();
 }
 
@@ -1551,37 +1609,44 @@ const XELER_LOGO_DATAURL = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2
   }
         
     const subject = (mail.objet||"Votre devis Xeler Robotique — {NUM_DEVIS}").replace("{NUM_DEVIS}", currentDevisNum);
-                  const body = (mail.message||"").replace("{CLIENT}", devis.client.nom||"").replace("{NUM_DEVIS}", currentDevisNum);
-                  const fileName = `Devis_${currentDevisNum}.pdf`;
-                  const file = new File([finalBytes], fileName, {type:"application/pdf"});
-                
-                  // Le partage natif (Web Share) n'est proposé que sur téléphone/tablette.
-                  // Sur PC (Windows/Mac), il ouvrirait le menu de partage du système d'exploitation
-                  // (ex. "Partage de proximité" sous Windows) au lieu du client mail habituel — on l'évite.
-                  const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-                
-                  if(isMobileDevice && navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
-                        try{
-                                await navigator.share({files:[file], title: subject, text: body});
-                                                            toast("Partage ouvert — choisissez Outlook ou Mail pour joindre le PDF automatiquement.");
-                                return;
-                        }catch(e){
-                                if(e && e.name === "AbortError") return;
-                        }
-                  }
-                
-                  const blob = new Blob([finalBytes], {type:"application/pdf"});
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url; a.download = fileName;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                  if(attachedCount>0) toast(`PDF téléchargé avec ${attachedCount} fiche(s) jointe(s) — ouverture de votre messagerie...`);
-                  else toast("PDF téléchargé — ouverture de votre messagerie...");
-                  const mailto = `mailto:${devis.client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\n(Pensez à joindre le PDF téléchargé : "+fileName+")")}`;
-                  setTimeout(()=>{ window.location.href = mailto; }, 900);
-              }
-  function renderCatalogue(){
+  const body = (mail.message||"").replace("{CLIENT}", devis.client.nom||"").replace("{NUM_DEVIS}", currentDevisNum);
+  const fileName = `Devis_${currentDevisNum}.pdf`;
+  const file = new File([finalBytes], fileName, {type:"application/pdf"});
+
+  // Le partage natif (Web Share) n'est proposé que sur téléphone/tablette.
+  const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if(isMobileDevice && navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({files:[file], title: subject, text: body});
+      toast("Partage ouvert — choisissez Outlook ou Mail pour joindre le PDF automatiquement.");
+      return;
+    }catch(e){
+      if(e && e.name === "AbortError") return;
+    }
+  }
+
+  // Repli PC : téléchargement, puis un vrai bouton cliquable pour ouvrir le brouillon mail
+  // (les navigateurs bloquent silencieusement l'ouverture automatique d'un mailto: si elle
+  // n'est pas déclenchée par un clic direct — d'où ce bouton plutôt qu'une ouverture auto).
+  const blob = new Blob([finalBytes], {type:"application/pdf"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+  const mailto = `mailto:${devis.client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\n(Pensez à joindre le PDF téléchargé : "+fileName+")")}`;
+  const attachedTxt = attachedCount>0 ? ` (${attachedCount} fiche(s) jointe(s))` : "";
+  toastWithLink(`PDF téléchargé${attachedTxt}.`, mailto, "Ouvrir le brouillon email →");
+}
+function toastWithLink(msg, href, linkLabel){
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.innerHTML = `<span class="ic">✓</span> ${msg} <a href="${href}" style="color:var(--accent); font-weight:700; margin-left:6px; text-decoration:underline;">${linkLabel}</a>`;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 9000);
+}
+function renderCatalogue(){
   const grid = document.getElementById("catalogue-grid");
   grid.innerHTML = DATA.robots.map(r=>`
     <div class="card" style="cursor:pointer;" onclick="openFicheView('${r.id}')">
@@ -1692,6 +1757,9 @@ function renderAdminAll(){
   document.getElementById("fin-duree").value = fin.duree;
   document.getElementById("fin-financeur").value = fin.financeur;
   document.getElementById("fin-mention").value = fin.mention;
+  const maint = DATA.maintenance;
+  document.getElementById("maint-prix").value = maint.prix;
+  document.getElementById("maint-desc").value = maint.description || "";
 }
 function saveFinancement(){
   DATA.financement = {
@@ -1863,35 +1931,49 @@ function saveRobot(id){
 /* ---------- Admin consommables ---------- */
 function renderAdminConsom(){
   const wrap = document.getElementById("admin-consum-list");
-  wrap.innerHTML = DATA.consommables.map(c=>`
+  wrap.innerHTML = DATA.consommables.map(c=>{
+    const modelesTxt = (c.modeles&&c.modeles.length)
+      ? c.modeles.map(id=>{ const r=DATA.robots.find(x=>x.id===id); return r?r.nom:id; }).join(", ")
+      : "Tous les modèles";
+    return `
     <div class="admin-list-item">
       <div style="flex:1;">
         <div class="admin-item-name">${c.nom}</div>
-        <div class="admin-item-sub">${fmt(c.prix)} / ${c.unite}</div>
+        <div class="admin-item-sub">${fmt(c.prix)} / ${c.unite} — ${modelesTxt}</div>
       </div>
       <div class="admin-item-actions">
         <button class="btn btn-ghost btn-sm" onclick="openConsumModal('${c.id}')">Modifier</button>
         <button class="btn btn-danger btn-sm" onclick="deleteConsum('${c.id}')">Suppr.</button>
       </div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 }
 function deleteConsum(id){
-  if(!confirm("Supprimer ce consommable ?")) return;
+  if(!confirm("Supprimer cette option ?")) return;
   DATA.consommables = DATA.consommables.filter(c=>c.id!==id);
-  saveData(); renderAdminConsom(); toast("Consommable supprimé.");
+  saveData(); renderAdminConsom(); renderAll(); toast("Option supprimée.");
 }
 function openConsumModal(id){
-  const c = id ? DATA.consommables.find(x=>x.id===id) : {id:"", nom:"", prix:0, unite:"unité"};
+  const c = id ? DATA.consommables.find(x=>x.id===id) : {id:"", nom:"", prix:0, unite:"unité", modeles:[]};
+  const modeles = c.modeles || [];
+  const modelesHtml = DATA.robots.map(r=>`
+    <label style="display:flex; align-items:center; gap:6px; text-transform:none; font-size:0.78rem; color:var(--text-soft); margin-bottom:5px;">
+      <input type="checkbox" class="cm-modele-ck" value="${r.id}" style="width:auto;" ${modeles.includes(r.id)?'checked':''}> ${r.nom} <span style="color:var(--text-faint);">(${r.brand})</span>
+    </label>`).join("");
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
   overlay.id = "consum-modal";
   overlay.innerHTML = `
     <div class="modal" style="max-width:420px;">
-      <div class="modal-head"><h3>${id?'Modifier':'Nouveau'} consommable</h3><button class="close-x" onclick="closeModal('consum-modal')">✕</button></div>
+      <div class="modal-head"><h3>${id?'Modifier':'Nouvelle'} option</h3><button class="close-x" onclick="closeModal('consum-modal')">✕</button></div>
       <div class="field"><label>Nom</label><input type="text" id="cm-nom" value="${esc(c.nom)}"></div>
       <div class="field-row">
         <div class="field"><label>Prix HT (€)</label><input type="number" id="cm-prix" value="${c.prix}"></div>
         <div class="field"><label>Unité</label><input type="text" id="cm-unite" value="${esc(c.unite)}"></div>
+      </div>
+      <div class="field">
+        <label>Modèles compatibles (aucune case = tous les modèles)</label>
+        <div style="max-height:180px; overflow-y:auto; border:1px solid var(--card-border); border-radius:9px; padding:10px;">${modelesHtml}</div>
       </div>
       <div style="display:flex; gap:8px; margin-top:10px;">
         <button class="btn btn-primary" onclick="saveConsum('${id||''}')">Enregistrer</button>
@@ -1903,10 +1985,18 @@ function openConsumModal(id){
 function saveConsum(id){
   const nom = document.getElementById("cm-nom").value.trim();
   if(!nom){ toast("Le nom est requis."); return; }
-  const data = {id: id || "consum-"+Date.now(), nom, prix: parseFloat(document.getElementById("cm-prix").value)||0, unite: document.getElementById("cm-unite").value.trim()||"unité"};
+  const modeles = Array.from(document.querySelectorAll(".cm-modele-ck:checked")).map(el=>el.value);
+  const data = {id: id || "consum-"+Date.now(), nom, prix: parseFloat(document.getElementById("cm-prix").value)||0, unite: document.getElementById("cm-unite").value.trim()||"unité", modeles};
   if(id){ const idx = DATA.consommables.findIndex(c=>c.id===id); DATA.consommables[idx]=data; }
   else{ DATA.consommables.push(data); }
-  saveData(); closeModal("consum-modal"); renderAdminConsom(); toast("Consommable enregistré.");
+  saveData(); closeModal("consum-modal"); renderAdminConsom(); renderAll(); toast("Option enregistrée.");
+}
+function saveMaintenance(){
+  DATA.maintenance = {
+    prix: parseFloat(document.getElementById("maint-prix").value)||99,
+    description: document.getElementById("maint-desc").value.trim()
+  };
+  saveData(); renderAll(); toast("Contrat de maintenance enregistré.");
 }
 
 function closeModal(id){ const el = document.getElementById(id); if(el) el.remove(); }
