@@ -1552,32 +1552,35 @@ const XELER_LOGO_DATAURL = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2
         
     const subject = (mail.objet||"Votre devis Xeler Robotique — {NUM_DEVIS}").replace("{NUM_DEVIS}", currentDevisNum);
                   const body = (mail.message||"").replace("{CLIENT}", devis.client.nom||"").replace("{NUM_DEVIS}", currentDevisNum);
-    const fileName = `Devis_${currentDevisNum}.pdf`;
+                  const fileName = `Devis_${currentDevisNum}.pdf`;
                   const file = new File([finalBytes], fileName, {type:"application/pdf"});
                 
-                  if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+                  // Le partage natif (Web Share) n'est proposé que sur téléphone/tablette.
+                  // Sur PC (Windows/Mac), il ouvrirait le menu de partage du système d'exploitation
+                  // (ex. "Partage de proximité" sous Windows) au lieu du client mail habituel — on l'évite.
+                  const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                
+                  if(isMobileDevice && navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
                         try{
                                 await navigator.share({files:[file], title: subject, text: body});
-        toast("Partage ouvert — choisissez Outlook ou Mail pour joindre le PDF automatiquement.");
-        return;
+                                                            toast("Partage ouvert — choisissez Outlook ou Mail pour joindre le PDF automatiquement.");
+                                return;
                         }catch(e){
-                                // L'utilisateur a annulé le partage, ou l'API a échoué : on continue sur le repli ci-dessous
-        if(e && e.name === "AbortError") return;
-  }
-  }
-  
-    // Repli desktop : téléchargement + brouillon mailto (pièce jointe à glisser manuellement)
+                                if(e && e.name === "AbortError") return;
+                        }
+                  }
+                
                   const blob = new Blob([finalBytes], {type:"application/pdf"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
                   a.href = url; a.download = fileName;
                   a.click();
                   URL.revokeObjectURL(url);
                   if(attachedCount>0) toast(`PDF téléchargé avec ${attachedCount} fiche(s) jointe(s) — ouverture de votre messagerie...`);
-    else toast("PDF téléchargé — ouverture de votre messagerie...");
-    const mailto = `mailto:${devis.client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\n(Pensez à joindre le PDF téléchargé : "+fileName+")")}`;
-    setTimeout(()=>{ window.location.href = mailto; }, 900);
-  }
+                  else toast("PDF téléchargé — ouverture de votre messagerie...");
+                  const mailto = `mailto:${devis.client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\n(Pensez à joindre le PDF téléchargé : "+fileName+")")}`;
+                  setTimeout(()=>{ window.location.href = mailto; }, 900);
+              }
   function renderCatalogue(){
   const grid = document.getElementById("catalogue-grid");
   grid.innerHTML = DATA.robots.map(r=>`
