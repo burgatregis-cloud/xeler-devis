@@ -1636,15 +1636,23 @@ const XELER_LOGO_DATAURL = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2
   a.click();
   URL.revokeObjectURL(url);
   const mailto = `mailto:${devis.client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\n(Pensez à joindre le PDF téléchargé : "+fileName+")")}`;
-  const attachedTxt = attachedCount>0 ? ` (${attachedCount} fiche(s) jointe(s))` : "";
-  toastWithLink(`PDF téléchargé${attachedTxt}.`, mailto, "Ouvrir le brouillon email →");
+  openSendInstructionsModal(fileName, mailto);
 }
-function toastWithLink(msg, href, linkLabel){
-  const t = document.createElement("div");
-  t.className = "toast";
-  t.innerHTML = `<span class="ic">✓</span> ${msg} <a href="${href}" style="color:var(--accent); font-weight:700; margin-left:6px; text-decoration:underline;">${linkLabel}</a>`;
-  document.body.appendChild(t);
-  setTimeout(()=>t.remove(), 9000);
+function openSendInstructionsModal(fileName, mailto){
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.id = "send-modal";
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:460px;">
+      <div class="modal-head"><h3>Envoi du devis</h3><button class="close-x" onclick="closeModal('send-modal')">✕</button></div>
+      <div style="font-size:0.88rem; line-height:1.6; color:var(--text-soft);">
+        <p style="margin-bottom:10px;"><b style="color:#fff;">1.</b> Le PDF <b style="color:var(--accent);">${fileName}</b> vient d'être téléchargé (dossier Téléchargements).</p>
+        <p style="margin-bottom:10px;"><b style="color:#fff;">2.</b> Cliquez ci-dessous pour ouvrir le brouillon dans votre messagerie.</p>
+        <p style="margin-bottom:16px;"><b style="color:#fff;">3.</b> <u>Glissez le PDF téléchargé dans la fenêtre du message</u> avant de l'envoyer — un site web ne peut jamais joindre un fichier automatiquement, pour des raisons de sécurité.</p>
+      </div>
+      <a href="${mailto}" class="btn btn-primary" style="width:100%; text-decoration:none;" onclick="setTimeout(()=>closeModal('send-modal'), 400);">✉ Ouvrir le brouillon email</a>
+    </div>`;
+  document.body.appendChild(overlay);
 }
 function renderCatalogue(){
   const grid = document.getElementById("catalogue-grid");
