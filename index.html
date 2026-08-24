@@ -2070,6 +2070,48 @@ renderConsumSelect();
 renderAll();
 document.getElementById("brand-logo").src = XELER_LOGO_DATAURL;
 
+/* ================================================================
+   SYNCHRONISATION BASE DE PRIX COMMUNE (catalogue.json)
+   ================================================================
+   Objectif : quand Fadoua (ou vous) met à jour les prix/robots ici et
+   clique "Exporter catalogue & prix", puis dépose ce fichier renommé
+   catalogue.json à l'adresse ci-dessous, tous les commerciaux qui
+   ouvrent cette application (avec une connexion internet) récupèrent
+   automatiquement le dernier tarif au démarrage — plus besoin de
+   s'envoyer le fichier de collaborateur en collaborateur.
+
+   ⚠️ À AJUSTER : CATALOGUE_URL doit pointer vers l'adresse définitive
+   du fichier catalogue.json une fois l'hébergement du site choisi
+   (sous-répertoire de www.xeler.com). C'est la MÊME adresse que celle
+   utilisée par le configurateur public du site — une seule base de
+   prix, une seule adresse. Si cette adresse est sur un autre nom de
+   domaine que celui qui héberge cette page (ce qui est le cas
+   aujourd'hui, cette app étant sur GitHub Pages), le serveur qui
+   héberge catalogue.json doit autoriser les requêtes venant d'un
+   autre site (en-tête CORS "Access-Control-Allow-Origin") — un
+   réglage courant chez la plupart des hébergeurs, à demander si besoin.
+   Tant que cette adresse n'est pas encore valide ou accessible,
+   l'application continue de fonctionner normalement avec les données
+   déjà enregistrées localement (aucun risque de casse).
+*/
+const CATALOGUE_URL = "https://www.xeler.com/robotique/catalogue.json";
+function applySharedCatalogue(parsed){
+  if(!parsed || !Array.isArray(parsed.robots)) return false;
+  DATA = parsed;
+  saveData();
+  return true;
+}
+fetch(CATALOGUE_URL + "?_=" + Date.now())
+  .then(r => r.ok ? r.json() : null)
+  .then(parsed => {
+    if(applySharedCatalogue(parsed)){
+      renderAll();
+      renderAdminAll();
+      toast("Base de prix synchronisée.");
+    }
+  })
+  .catch(()=>{ /* adresse pas encore prête, ou hors-ligne : on garde les données locales */ });
+
 /* PWA service worker registration */
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
