@@ -635,6 +635,8 @@ const DEFAULT_DATA = {
         {id:"t8-plateau", nom:"Plateau supplémentaire", prix:180},
         {id:"t8-ecran", nom:"Écran publicitaire", prix:350}
       ],
+      installation: {prix: 290, surDevis: false},
+      argumentaire: "Idéal pour les petits restaurants et bars à la configuration serrée : le T8 se déploie en salle sans travaux, avec un temps de prise en main très court pour vos équipes.",
       brochure: "", fiche: "", video: ""
     },
     {
@@ -650,6 +652,8 @@ const DEFAULT_DATA = {
       options: [
         {id:"t9-plateau", nom:"Plateau supplémentaire", prix:180}
       ],
+      installation: {prix: 290, surDevis: false},
+      argumentaire: "Pensé pour les services multi-tables sans repasser par la cuisine, même aux heures de rush — un renfort direct pour votre salle sans recruter.",
       brochure: "", fiche: "", video: ""
     },
     {
@@ -663,6 +667,8 @@ const DEFAULT_DATA = {
         {titre:"Sécurité", texte:"Vision stéréo + LiDAR 360°"}
       ],
       options: [{id:"s100-remorque", nom:"Remorque additionnelle", prix:900}],
+      installation: {prix: 490, surDevis: false},
+      argumentaire: "Prêt à l'emploi dès la mise en service : le S100 automatise vos navettes internes sans réorganiser vos flux existants, pour libérer vos équipes des trajets répétitifs.",
       brochure: "", fiche: "", video: ""
     },
     {
@@ -676,6 +682,8 @@ const DEFAULT_DATA = {
         {titre:"Certification", texte:"ISO 3691-4"}
       ],
       options: [{id:"s300-remorque", nom:"Remorque additionnelle", prix:1200}],
+      installation: {prix: 590, surDevis: false},
+      argumentaire: "Même simplicité de mise en service que le S100, avec une capacité triplée : le S300 prend en charge les transports inter-lignes et le matériel volumineux au quotidien.",
       brochure: "", fiche: "", video: ""
     },
     {
@@ -689,6 +697,8 @@ const DEFAULT_DATA = {
         {titre:"Protection", texte:"IP54 — intérieur/extérieur"}
       ],
       options: [{id:"rbw-camera", nom:"Module capteurs additionnel", prix:1500}],
+      installation: {prix: null, surDevis: true},
+      argumentaire: "Une présence dissuasive et continue là où la vidéoprotection classique a des angles morts — la cartographie de vos parcours de ronde est étudiée site par site.",
       brochure: "", fiche: "", video: ""
     },
     {
@@ -702,6 +712,8 @@ const DEFAULT_DATA = {
         {titre:"Usage", texte:"Base technique du RBwatcher"}
       ],
       options: [],
+      installation: {prix: null, surDevis: true},
+      argumentaire: "",
       brochure: "", fiche: "", video: ""
     },
     {
@@ -714,7 +726,10 @@ const DEFAULT_DATA = {
         {titre:"Autonomie balayage/lavage", texte:"14 h / 4h30"},
         {titre:"Passage mini.", texte:"600 mm"}
       ],
-      options: [], brochure: "", fiche: "assets/fiches/gausium-phantas.pdf", video: ""
+      options: [],
+      installation: {prix: 590, surDevis: false},
+      argumentaire: "Le format compact idéal pour démarrer : le Phantas entretient bureaux, commerces et accueils sans immobiliser vos équipes, avec un temps de déploiement très court.",
+      brochure: "", fiche: "assets/fiches/gausium-phantas.pdf", video: ""
     },
     {
       id: "gausium-mira", brand: "Gausium", nom: "MIRA", categorie: "Nettoyage — Gamme intermédiaire",
@@ -726,7 +741,10 @@ const DEFAULT_DATA = {
         {titre:"Autonomie lavage/balayage", texte:"4 h / 8 h"},
         {titre:"Passage mini.", texte:"660 mm"}
       ],
-      options: [], brochure: "", fiche: "assets/fiches/gausium-mira.pdf", video: ""
+      options: [],
+      installation: {prix: 890, surDevis: false},
+      argumentaire: "Pensée pour les surfaces moyennes et les allées étroites : le Mira couvre couloirs, galeries commerciales et ateliers avec une régularité que l'entretien manuel ne garantit pas toujours.",
+      brochure: "", fiche: "assets/fiches/gausium-mira.pdf", video: ""
     },
     {
       id: "gausium-marvel", brand: "Gausium", nom: "MARVEL", categorie: "Nettoyage — Grandes surfaces",
@@ -738,7 +756,10 @@ const DEFAULT_DATA = {
         {titre:"Autonomie lavage/balayage", texte:"5-7 h / ≥ 8 h"},
         {titre:"Poids", texte:"220 kg"}
       ],
-      options: [], brochure: "", fiche: "assets/fiches/gausium-marvel.pdf", video: ""
+      options: [],
+      installation: {prix: null, surDevis: true},
+      argumentaire: "Pour vos très grandes surfaces (retail, entrepôts, aéroports, hôpitaux) : un seul robot polyvalent remplace des heures de nettoyage manuel réparties sur plusieurs équipes.",
+      brochure: "", fiche: "assets/fiches/gausium-marvel.pdf", video: ""
     },
     {
       id: "gausium-omnie", brand: "Gausium", nom: "OMNIE", categorie: "Nettoyage — Très grandes surfaces",
@@ -750,7 +771,10 @@ const DEFAULT_DATA = {
         {titre:"Vitesse max.", texte:"1,4 m/s"},
         {titre:"Poids", texte:"148–157 kg"}
       ],
-      options: [], brochure: "", fiche: "assets/fiches/gausium-omnie.pdf", video: ""
+      options: [],
+      installation: {prix: null, surDevis: true},
+      argumentaire: "Conçue pour les flux de circulation denses (aéroports, hypermarchés, centres commerciaux) : détection à 360° et navigation fiable même en présence continue de public.",
+      brochure: "", fiche: "assets/fiches/gausium-omnie.pdf", video: ""
     },
     {
       id: "gausium-beetle", brand: "Gausium", nom: "BEETLE", categorie: "Nettoyage — Extérieur & industrie",
@@ -762,7 +786,10 @@ const DEFAULT_DATA = {
         {titre:"Bac à déchets", texte:"45 L"},
         {titre:"Poids", texte:"102–112 kg"}
       ],
-      options: [], brochure: "", fiche: "assets/fiches/gausium-beetle.pdf", video: ""
+      options: [],
+      installation: {prix: null, surDevis: true},
+      argumentaire: "Le robot des grandes surfaces extérieures et industrielles : jusqu'à 40 000 m² couverts en une nuit, sur des sols exigeants où l'entretien manuel atteint vite ses limites.",
+      brochure: "", fiche: "assets/fiches/gausium-beetle.pdf", video: ""
     },
     {
       id: "gausium-vacuum40", brand: "Gausium", nom: "VACUUM 40", categorie: "Nettoyage — Moquettes & hôtellerie",
@@ -774,7 +801,10 @@ const DEFAULT_DATA = {
         {titre:"Autonomie aspir./mopping", texte:"3 h / 18 h"},
         {titre:"Poids", texte:"91 kg"}
       ],
-      options: [], brochure: "", fiche: "assets/fiches/gausium-vacuum40.pdf", video: ""
+      options: [],
+      installation: {prix: 590, surDevis: false},
+      argumentaire: "Trois modes de nettoyage de moquette et une filtration HEPA médicale : idéal pour les hôtels, cinémas et bureaux où la qualité de l'air fait partie de l'expérience client.",
+      brochure: "", fiche: "assets/fiches/gausium-vacuum40.pdf", video: ""
     },
     {
       id: "gausium-scrubber75", brand: "Gausium", nom: "SCRUBBER 75", categorie: "Nettoyage — Usage intensif",
@@ -786,7 +816,10 @@ const DEFAULT_DATA = {
         {titre:"Réservoir eau propre/sale", texte:"75 L / 50 L"},
         {titre:"Poids", texte:"400 kg"}
       ],
-      options: [], brochure: "", fiche: "assets/fiches/gausium-scrubber75.pdf", video: ""
+      options: [],
+      installation: {prix: null, surDevis: true},
+      argumentaire: "Pour les sols les plus difficiles — halls immenses, parkings souterrains, sites industriels — la brosse 45 kg et le mode dégraissant apportent une puissance qu'aucune autolaveuse manuelle standard n'égale.",
+      brochure: "", fiche: "assets/fiches/gausium-scrubber75.pdf", video: ""
     }
   ],
   consommables: [
@@ -797,7 +830,8 @@ const DEFAULT_DATA = {
   ],
   maintenance: {
     prix: 99,
-    description: "Maintenance, déplacement et pièces inclus (consommables en supplément)."
+    description: "Maintenance, déplacement et pièces inclus (consommables en supplément).",
+    argumentaire: "Vos robots sont des outils de production : une panne non anticipée immobilise le service qu'ils rendaient. Le contrat de maintenance couvre le déplacement, la main-d'œuvre et les pièces d'usure, avec une hotline disponible 8h/jour et une intervention sous 24h. Même principe que pour vos copieurs : un coût prévisible, pas de mauvaise surprise."
   }
 };
 
@@ -1023,6 +1057,16 @@ function computeTotals(){
     const c = DATA.consommables.find(x=>x.id===id); if(!c) return;
     ht += c.prix * qty;
   });
+  let installationHT = 0;
+  let installationSurDevisCount = 0;
+  Object.entries(devis.robots).forEach(([id,sel])=>{
+    const r = DATA.robots.find(x=>x.id===id); if(!r) return;
+    const inst = r.installation;
+    if(!inst) return;
+    if(inst.surDevis) installationSurDevisCount += sel.qty;
+    else installationHT += (inst.prix||0) * sel.qty;
+  });
+  ht += installationHT;
   const remiseVal = parseFloat(document.getElementById("remise-val")?.value ?? devis.remise.val ?? 0);
   const remiseType = document.getElementById("remise-type")?.value || devis.remise.type;
   devis.remise = {val: remiseVal, type: remiseType};
@@ -1035,7 +1079,8 @@ function computeTotals(){
   const mensualiteHT = htNet * taux;
   const mensualiteTva = mensualiteHT * 0.20;
   const mensualiteTtc = mensualiteHT + mensualiteTva;
-  return {ht, remiseAmount, htNet, tva, ttc, mensualiteHT, mensualiteTva, mensualiteTtc};
+  const maintenanceTtc = devis.maintenance ? DATA.maintenance.prix * 1.20 : 0;
+  return {ht, remiseAmount, htNet, tva, ttc, mensualiteHT, mensualiteTva, mensualiteTtc, installationHT, installationSurDevisCount, maintenanceTtc};
 }
 
 function renderSummary(){
@@ -1043,8 +1088,9 @@ function renderSummary(){
   const wrap = document.getElementById("summary-lines-dynamic");
   const fin = DATA.financement;
   wrap.innerHTML = `
-    <div class="sum-line"><span>Total HT</span><span>${fmt(t.ht)}</span></div>
-    ${t.hasRemise? `<div class="sum-line"><span>Remise</span><span>− ${fmt(t.remiseAmount)}</span></div>` : ''}
+    <div class="sum-line"><span>Robots, options &amp; installation HT</span><span>${fmt(t.ht)}</span></div>
+    ${t.installationSurDevisCount>0? `<div class="sum-line" style="font-size:0.78rem;"><span>dont installation sur devis (${t.installationSurDevisCount} robot${t.installationSurDevisCount>1?'s':''})</span><span>nous consulter</span></div>` : ''}
+    ${t.remiseAmount? `<div class="sum-line"><span>Remise</span><span>− ${fmt(t.remiseAmount)}</span></div>` : ''}
     <div class="sum-line"><span>TVA (20%)</span><span>${fmt(t.tva)}</span></div>
     <div class="sum-line total"><span>Comptant TTC</span><span class="val">${fmt(t.ttc)}</span></div>
     <div class="sum-line total" style="font-size:1rem;"><span>ou ${fin.financeur} ${fin.duree} mois TTC</span><span class="val">${fmt(t.mensualiteTtc)}/mois</span></div>
@@ -1144,6 +1190,21 @@ function renderDocument(){
       <tbody>${consomRows}</tbody>
     </table>` : '';
 
+  let installRows = "";
+  Object.entries(devis.robots).forEach(([id,sel])=>{
+    const r = DATA.robots.find(x=>x.id===id); if(!r) return;
+    const inst = r.installation;
+    if(!inst) return;
+    if(inst.surDevis){ installRows += `<tr><td>Installation &amp; paramétrage — ${r.nom}</td><td>${sel.qty}</td><td colspan="2">Sur devis (visite technique)</td></tr>`; }
+    else { installRows += `<tr><td>Installation &amp; paramétrage — ${r.nom}</td><td>${sel.qty}</td><td>${fmt(inst.prix)}</td><td>${fmt(inst.prix*sel.qty)}</td></tr>`; }
+  });
+  const installHtml = installRows ? `
+    <div class="doc-section-label">Installation &amp; paramétrage</div>
+    <table class="doc-table-dark">
+      <thead><tr><th>Désignation</th><th>Qté</th><th>Prix unitaire</th><th>Total</th></tr></thead>
+      <tbody>${installRows}</tbody>
+    </table>` : '';
+
   const html = `
   <div class="doc-page-dark">
     <div class="doc-header-dark">
@@ -1159,7 +1220,9 @@ function renderDocument(){
     </div>
 
     ${robotCards}
+    ${installHtml}
     ${consomHtml}
+    ${devis.maintenance? `<div class="doc-section-label">Contrat de maintenance</div><div class="doc-fin-mention" style="margin-top:0;">${fmt(t.maintenanceTtc)} TTC / mois — ${DATA.maintenance.description||''}</div>` : ''}
 
     <div class="doc-totals-dark">
       <div class="doc-totals-block">
@@ -1177,6 +1240,7 @@ function renderDocument(){
       </div>
     </div>
     <div class="doc-fin-mention">${fin.mention}</div>
+    ${t.installationSurDevisCount>0? `<div class="doc-fin-mention">Installation sur devis pour ${t.installationSurDevisCount} robot(s) de grande superficie ou site complexe : le total ci-dessus ne comprend pas ce poste, chiffré après visite technique.</div>` : ''}
 
     <div class="doc-foot-dark">
       <span>${ent.mentions}</span>
@@ -1876,6 +1940,17 @@ function openRobotModal(id){
         <div class="field"><label>Lien fiche technique</label><input type="text" id="rm-fiche" value="${esc(r.fiche)}"></div>
       </div>
       <div class="field"><label>Vidéo YouTube constructeur</label><input type="text" id="rm-video" value="${esc(r.video)}" placeholder="https://youtube.com/..."></div>
+      <div class="field"><label>Argumentaire de vente (affiché sur le site public)</label><textarea id="rm-argumentaire" rows="2" placeholder="1 à 2 phrases qui donnent envie...">${esc(r.argumentaire||"")}</textarea></div>
+
+      <div class="field-row" style="align-items:end;">
+        <div class="field"><label>Installation &amp; paramétrage HT (€)</label><input type="number" id="rm-install-prix" value="${(r.installation&&r.installation.prix!=null) ? r.installation.prix : ''}" placeholder="Laisser vide si « sur devis »" ${(r.installation&&r.installation.surDevis)?'disabled':''}></div>
+        <div class="field" style="margin-bottom:13px;">
+          <label style="text-transform:none; display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="rm-install-surdevis" style="width:auto;" ${(r.installation&&r.installation.surDevis)?'checked':''} onchange="document.getElementById('rm-install-prix').disabled=this.checked;">
+            Installation « sur devis » (site de grande superficie)
+          </label>
+        </div>
+      </div>
 
       <div class="field"><label>Options (nom + prix HT)</label>
         <div id="rm-options"></div>
@@ -1925,7 +2000,12 @@ function saveRobot(id){
     options: editingRobotOptions.filter(o=>o.nom.trim()!==""),
     brochure: document.getElementById("rm-brochure").value.trim(),
     fiche: document.getElementById("rm-fiche").value.trim(),
-    video: document.getElementById("rm-video").value.trim()
+    video: document.getElementById("rm-video").value.trim(),
+    argumentaire: document.getElementById("rm-argumentaire").value.trim(),
+    installation: {
+      surDevis: document.getElementById("rm-install-surdevis").checked,
+      prix: document.getElementById("rm-install-surdevis").checked ? null : (document.getElementById("rm-install-prix").value==="" ? null : parseFloat(document.getElementById("rm-install-prix").value)||0)
+    }
   };
   if(id){
     const idx = DATA.robots.findIndex(r=>r.id===id);
