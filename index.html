@@ -71,6 +71,24 @@ input,select,textarea{font-family:inherit;}
 }
 .brand-pill img{height:20px; display:block;}
 .brand span{color:var(--accent);}
+.portal-link{
+  display:flex; align-items:center; gap:7px;
+  margin:0 10px 14px 10px; padding:8px 10px; border-radius:var(--radius-sm);
+  color:var(--text-faint); font-size:0.78rem; font-weight:600; text-decoration:none;
+  transition:background .15s, color .15s;
+}
+.portal-link:hover{background:rgba(255,255,255,0.05); color:#fff;}
+.portal-link-mobile{display:none;}
+@media (max-width:880px){
+  .portal-link-mobile{
+    display:flex; align-items:center; gap:6px;
+    position:fixed; top:12px; right:12px; z-index:60;
+    background:rgba(15,20,35,0.85); backdrop-filter:blur(10px);
+    border:1px solid var(--card-border); border-radius:20px;
+    padding:8px 13px; font-size:0.74rem; font-weight:700; color:var(--text-soft);
+    text-decoration:none; box-shadow:0 2px 10px rgba(0,0,0,0.35);
+  }
+}
 .nav-item{
   display:flex; align-items:center; gap:10px;
   padding:11px 12px; border-radius:var(--radius-sm);
@@ -340,8 +358,11 @@ hr.sep{border:none; border-top:1px solid var(--card-border); margin:18px 0;}
 </head>
 <body>
 
+<a class="portal-link-mobile" href="https://burgatregis-cloud.github.io/xeler-portail/" title="Retour au portail des outils"><span>🏠</span> Portail</a>
+
 <div id="app">
   <div class="sidebar">
+    <a class="portal-link" href="https://burgatregis-cloud.github.io/xeler-portail/"><span>🏠</span> Portail des outils</a>
     <div class="brand"><div class="brand-pill"><img id="brand-logo" alt="Xeler Robotique"></div></div>
     <button class="nav-item active" data-view="devis"><span class="ic">⚡</span> Chiffrage rapide</button>
     <button class="nav-item" data-view="catalogue"><span class="ic">▤</span> Catalogue</button>
