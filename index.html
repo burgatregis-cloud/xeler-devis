@@ -508,6 +508,7 @@ hr.sep{border:none; border-top:1px solid var(--card-border); margin:18px 0;}
           <div class="page-title">Administration</div>
           <div class="page-sub">Mise à jour des prix, robots, options et paramètres.</div>
         </div>
+        <button class="btn btn-ghost btn-sm" onclick="lockAdmin()">🔒 Verrouiller</button>
       </div>
 
       <div class="tabs">
@@ -892,7 +893,49 @@ let devis = {
 /* ================================================================
    NAVIGATION
    ================================================================ */
+const ADMIN_PASSWORD = "@Xeler6062";
+function isAdminUnlocked(){ return sessionStorage.getItem("xeler_admin_unlocked") === "1"; }
+function openAdminGate(){
+  if (document.getElementById("admin-gate")) return;
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.id = "admin-gate";
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:360px;">
+      <div class="modal-head"><h3>🔒 Administration</h3><button class="close-x" onclick="closeModal('admin-gate')">✕</button></div>
+      <div style="font-size:0.86rem; color:var(--text-soft); margin-bottom:14px;">Accès réservé — mot de passe requis.</div>
+      <form id="admin-gate-form">
+        <div class="field" style="margin-bottom:8px;"><input type="password" id="admin-pass" placeholder="Mot de passe" autocomplete="off"></div>
+        <div id="admin-pass-error" style="display:none; color:var(--accent); font-size:0.82rem; margin-bottom:12px;">Mot de passe incorrect.</div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">Déverrouiller</button>
+      </form>
+    </div>`;
+  document.body.appendChild(overlay);
+  const input = document.getElementById("admin-pass");
+  setTimeout(()=>input.focus(), 10);
+  document.getElementById("admin-gate-form").addEventListener("submit", e=>{ e.preventDefault(); checkAdminPassword(); });
+}
+function checkAdminPassword(){
+  const input = document.getElementById("admin-pass");
+  if (input.value === ADMIN_PASSWORD){
+    sessionStorage.setItem("xeler_admin_unlocked", "1");
+    closeModal("admin-gate");
+    switchView("admin");
+  } else {
+    document.getElementById("admin-pass-error").style.display = "block";
+    input.value = "";
+    input.focus();
+  }
+}
+function lockAdmin(){
+  sessionStorage.removeItem("xeler_admin_unlocked");
+  switchView("devis");
+}
 function switchView(name){
+  if (name === "admin" && !isAdminUnlocked()){
+    openAdminGate();
+    return;
+  }
   document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
   document.getElementById("view-"+name).classList.add("active");
   const navTarget = (name==="fiche") ? "catalogue" : name;
